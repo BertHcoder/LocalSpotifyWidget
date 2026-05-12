@@ -132,3 +132,54 @@ body {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
+
+/* ── Theme: compact ────────────────────────────────────────────────── */
+/* Thin horizontal bar — smaller art, single-line info, no extras     */
+
+.theme-compact {
+  width: 320px;
+  padding: 6px 8px;
+  gap: 10px;
+  border-radius: 8px;
+}
+
+.theme-compact #album-art {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+}
+
+.theme-compact #title span { font-size: 13px; }
+.theme-compact #artist      { font-size: 11px; }
+
+.theme-compact #progress-bar { height: 3px; }
+.theme-compact #time-current,
+.theme-compact #time-total   { font-size: 10px; }
+.theme-compact #time-row     { margin-top: 2px; }
+
+.theme-compact #next-track   { display: none; }
+.theme-compact #spotify-code { display: none; }
+
+/* ── Theme: minimal ────────────────────────────────────────────────── */
+/* Text only — no art, no code, ultra-light footprint                 */
+
+.theme-minimal {
+  width: auto;
+  max-width: 340px;
+  padding: 6px 12px;
+  gap: 0;
+  background: rgba(18, 18, 18, 0.7);
+  border-radius: 6px;
+}
+
+.theme-minimal #album-art    { display: none; }
+.theme-minimal #spotify-code { display: none; }
+.theme-minimal #next-track   { display: none; }
+
+.theme-minimal #title span { font-size: 14px; }
+.theme-minimal #artist      { font-size: 11px; color: #999; }
+
+.theme-minimal #progress-bar { height: 2px; }
+.theme-minimal #time-current,
+.theme-minimal #time-total   { display: none; }
+.theme-minimal #time-row     { margin-top: 3px; }

@@ -78,6 +78,16 @@ Grant permission, then close the tab — you're done.
 4. Uncheck **"Shutdown source when not visible"** so the widget keeps polling.
 5. Position it wherever you want on your scene.
 
+### Themes
+
+Append `?theme=` to the browser source URL to switch layouts:
+
+| Theme | URL | Description |
+|-------|-----|-------------|
+| **Default** | `.../overlay.html` | Full card — album art, progress bar, next track, Spotify Code |
+| **Compact** | `.../overlay.html?theme=compact` | Thin bar — smaller art, no next track or code (320 × ~60) |
+| **Minimal** | `.../overlay.html?theme=minimal` | Text only — no art, just title, artist, and a slim progress bar |
+
 ---
 
 ## How It Works

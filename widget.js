@@ -1,5 +1,10 @@
 const POLL_INTERVAL = 3000;           // ms between Spotify API polls
 
+// ── Theme from query string (?theme=compact | ?theme=minimal) ─────────
+const params = new URLSearchParams(window.location.search);
+const theme  = params.get('theme');
+if (theme) document.getElementById('widget').classList.add(`theme-${theme}`);
+
 const widget       = document.getElementById('widget');
 const albumArt     = document.getElementById('album-art');
 const titleSpan    = document.querySelector('#title span');
