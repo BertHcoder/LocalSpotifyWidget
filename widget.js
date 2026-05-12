@@ -1,13 +1,13 @@
 const POLL_INTERVAL = 3000;           // ms between Spotify API polls
 
 // ── Options from query string ─────────────────────────────────────────
-const params    = new URLSearchParams(window.location.search);
-const theme     = params.get('theme');
+const params = new URLSearchParams(window.location.search);
+const theme = params.get('theme');
 const fixedColor = params.get('color');                   // e.g. ?color=orange or ?color=1a1a2e
-const adaptive  = !fixedColor && params.get('adaptive') !== 'false'; // adaptive off when color is set
+const adaptive = !fixedColor && params.get('adaptive') !== 'false'; // adaptive off when color is set
 if (theme) document.getElementById('widget').classList.add(`theme-${theme}`);
 
-const widget       = document.getElementById('widget');
+const widget = document.getElementById('widget');
 
 function resolveColor(input) {
   const key = input.toLowerCase().replace(/[^a-z0-9#]/g, '');
@@ -29,15 +29,15 @@ if (fixedColor) {
   }
 }
 
-const albumArt     = document.getElementById('album-art');
-const titleSpan    = document.querySelector('#title span');
-const artistEl     = document.getElementById('artist');
+const albumArt = document.getElementById('album-art');
+const titleSpan = document.querySelector('#title span');
+const artistEl = document.getElementById('artist');
 const progressFill = document.getElementById('progress-fill');
-const timeCurrent  = document.getElementById('time-current');
-const timeTotal    = document.getElementById('time-total');
-const nextTrackEl  = document.getElementById('next-track');
-const spotifyCode  = document.getElementById('spotify-code');
-const showNameEl   = document.getElementById('show-name');
+const timeCurrent = document.getElementById('time-current');
+const timeTotal = document.getElementById('time-total');
+const nextTrackEl = document.getElementById('next-track');
+const spotifyCode = document.getElementById('spotify-code');
+const showNameEl = document.getElementById('show-name');
 
 let lastTrackId = null;
 
@@ -55,8 +55,8 @@ async function poll() {
     const isEpisode = data.type === 'episode';
     widget.classList.toggle('podcast', isEpisode);
 
-    titleSpan.textContent  = data.title;
-    artistEl.textContent   = isEpisode ? '' : data.artist;
+    titleSpan.textContent = data.title;
+    artistEl.textContent = isEpisode ? '' : data.artist;
     showNameEl.textContent = isEpisode ? data.show : '';
 
     // Only update art when the track changes (avoid flicker)
@@ -81,7 +81,7 @@ async function poll() {
 
     // Time display
     timeCurrent.textContent = formatMs(data.progressMs);
-    timeTotal.textContent   = formatMs(data.durationMs);
+    timeTotal.textContent = formatMs(data.durationMs);
 
     // Next track
     if (data.nextTitle) {
@@ -121,7 +121,7 @@ function extractColor(url) {
   img.crossOrigin = 'anonymous';
   img.onload = () => {
     const canvas = document.createElement('canvas');
-    const ctx    = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d');
     // Sample at 1px for speed
     canvas.width = 1;
     canvas.height = 1;
