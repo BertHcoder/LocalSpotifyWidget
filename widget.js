@@ -8,6 +8,7 @@ const progressFill = document.getElementById('progress-fill');
 const timeCurrent  = document.getElementById('time-current');
 const timeTotal    = document.getElementById('time-total');
 const nextTrackEl  = document.getElementById('next-track');
+const spotifyCode  = document.getElementById('spotify-code');
 
 let lastTrackId = null;
 
@@ -29,6 +30,13 @@ async function poll() {
     const trackId = `${data.title}|${data.artist}`;
     if (trackId !== lastTrackId) {
       albumArt.src = data.albumArt ?? '';
+      // Spotify Code: scannable barcode for the current track
+      if (data.trackUri) {
+        spotifyCode.src = `https://scannables.scdn.co/uri/plain/png/121212/white/256/${data.trackUri}`;
+        spotifyCode.classList.remove('hidden');
+      } else {
+        spotifyCode.classList.add('hidden');
+      }
       lastTrackId = trackId;
       applyMarquee();
     }

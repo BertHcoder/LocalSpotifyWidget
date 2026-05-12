@@ -120,6 +120,7 @@ app.get('/now-playing', async (_req, res) => {
       albumArt: track.album.images[0]?.url ?? null,
       progressMs: data.progress_ms,
       durationMs: track.duration_ms,
+      trackUri: track.uri ?? null,
       nextTitle,
       nextArtist,
     });
