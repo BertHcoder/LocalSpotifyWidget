@@ -14,6 +14,7 @@ const timeCurrent  = document.getElementById('time-current');
 const timeTotal    = document.getElementById('time-total');
 const nextTrackEl  = document.getElementById('next-track');
 const spotifyCode  = document.getElementById('spotify-code');
+const showNameEl   = document.getElementById('show-name');
 
 let lastTrackId = null;
 
@@ -28,8 +29,12 @@ async function poll() {
     }
 
     widget.classList.remove('hidden');
+    const isEpisode = data.type === 'episode';
+    widget.classList.toggle('podcast', isEpisode);
+
     titleSpan.textContent  = data.title;
-    artistEl.textContent   = data.artist;
+    artistEl.textContent   = isEpisode ? '' : data.artist;
+    showNameEl.textContent = isEpisode ? data.show : '';
 
     // Only update art when the track changes (avoid flicker)
     const trackId = `${data.title}|${data.artist}`;

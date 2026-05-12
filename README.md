@@ -22,6 +22,7 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 - **Artist name** — all featured artists, comma-separated
 - **Live progress bar** — real-time playback position with elapsed/total timestamps
 - **Next track preview** — shows what's coming up next in your queue
+- **Podcast & episode support** — detects episodes automatically, shows the podcast/show name in green
 - **Spotify Code** — scannable barcode so viewers can instantly grab the song
 - **Auto-hide** — widget slides out when playback is paused or stopped
 - **Transparent background** — composites cleanly over any OBS scene

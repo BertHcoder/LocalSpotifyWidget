@@ -93,7 +93,8 @@ app.get('/now-playing', async (_req, res) => {
     const data = await response.json();
     if (!data || !data.item) return res.json({ playing: false });
 
-    const track = data.item;
+    const item = data.item;
+    const isEpisode = item.type === 'episode';
 
     // Fetch the queue for the next upcoming song
     let nextTitle = null;
@@ -107,20 +108,26 @@ app.get('/now-playing', async (_req, res) => {
         const next = queueData.queue?.[0];
         if (next) {
           nextTitle = next.name;
-          nextArtist = next.artists.map(a => a.name).join(', ');
+          nextArtist = next.type === 'episode'
+            ? next.show?.name ?? null
+            : next.artists.map(a => a.name).join(', ');
         }
       }
     } catch { /* queue fetch is best-effort */ }
 
     res.json({
       playing: data.is_playing,
-      title: track.name,
-      artist: track.artists.map(a => a.name).join(', '),
-      album: track.album.name,
-      albumArt: track.album.images[0]?.url ?? null,
+      type: isEpisode ? 'episode' : 'track',
+      title: item.name,
+      artist: isEpisode ? null : item.artists.map(a => a.name).join(', '),
+      show: isEpisode ? (item.show?.name ?? null) : null,
+      album: isEpisode ? null : item.album.name,
+      albumArt: isEpisode
+        ? (item.images?.[0]?.url ?? item.show?.images?.[0]?.url ?? null)
+        : (item.album.images[0]?.url ?? null),
       progressMs: data.progress_ms,
-      durationMs: track.duration_ms,
-      trackUri: track.uri ?? null,
+      durationMs: item.duration_ms,
+      trackUri: item.uri ?? null,
       nextTitle,
       nextArtist,
     });

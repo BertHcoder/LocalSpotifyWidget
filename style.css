@@ -108,6 +108,17 @@ body {
   opacity: 0;
 }
 
+/* ── Show name (podcasts) ──────────────────────────────────────────── */
+#show-name {
+  font-size: 12px;
+  color: #1db954;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#show-name:empty { display: none; }
+
 /* ── Next track ────────────────────────────────────────────────────── */
 #next-track {
   font-size: 11px;
