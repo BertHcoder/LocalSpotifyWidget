@@ -16,9 +16,13 @@ body {
   padding: 10px;
   background: rgba(18, 18, 18, 0.85);
   border-radius: 12px;
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease, background 0.6s ease;
   opacity: 1;
   transform: translateX(0);
+}
+
+#widget.adaptive {
+  background: var(--adaptive-bg, rgba(18, 18, 18, 0.85));
 }
 
 #widget.hidden {

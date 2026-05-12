@@ -23,6 +23,7 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 - **Live progress bar** — real-time playback position with elapsed/total timestamps
 - **Next track preview** — shows what's coming up next in your queue
 - **Podcast & episode support** — detects episodes automatically, shows the podcast/show name in green
+- **Color-adaptive background** — widget background tints to match the album art (disable with `?adaptive=false`)
 - **Spotify Code** — scannable barcode so viewers can instantly grab the song
 - **Auto-hide** — widget slides out when playback is paused or stopped
 - **Transparent background** — composites cleanly over any OBS scene
@@ -88,6 +89,17 @@ Append `?theme=` to the browser source URL to switch layouts:
 | **Default** | `.../overlay.html` | Full card — album art, progress bar, next track, Spotify Code |
 | **Compact** | `.../overlay.html?theme=compact` | Thin bar — smaller art, no next track or code (320 × ~60) |
 | **Minimal** | `.../overlay.html?theme=minimal` | Text only — no art, just title, artist, and a slim progress bar |
+
+### Adaptive Background
+
+The widget automatically tints its background to match the album art's dominant color.  
+This is **on by default**. To disable it, add `?adaptive=false`:
+
+```
+http://127.0.0.1:4202/overlay.html?adaptive=false
+```
+
+You can combine it with themes: `?theme=compact&adaptive=false`.
 
 ---
 

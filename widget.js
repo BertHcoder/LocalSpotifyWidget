@@ -1,8 +1,9 @@
 const POLL_INTERVAL = 3000;           // ms between Spotify API polls
 
 // ── Theme from query string (?theme=compact | ?theme=minimal) ─────────
-const params = new URLSearchParams(window.location.search);
-const theme  = params.get('theme');
+const params    = new URLSearchParams(window.location.search);
+const theme     = params.get('theme');
+const adaptive  = params.get('adaptive') !== 'false';   // on by default, ?adaptive=false to disable
 if (theme) document.getElementById('widget').classList.add(`theme-${theme}`);
 
 const widget       = document.getElementById('widget');
@@ -40,6 +41,7 @@ async function poll() {
     const trackId = `${data.title}|${data.artist}`;
     if (trackId !== lastTrackId) {
       albumArt.src = data.albumArt ?? '';
+      if (adaptive && data.albumArt) extractColor(data.albumArt);
       // Spotify Code: scannable barcode for the current track
       if (data.trackUri) {
         spotifyCode.src = `https://scannables.scdn.co/uri/plain/png/121212/white/256/${data.trackUri}`;
@@ -89,6 +91,24 @@ function applyMarquee() {
       titleSpan.classList.add('scrolling');
     }
   });
+}
+
+// ── Dominant-color extraction ─────────────────────────────────────────
+function extractColor(url) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const ctx    = canvas.getContext('2d');
+    // Sample at 1px for speed
+    canvas.width = 1;
+    canvas.height = 1;
+    ctx.drawImage(img, 0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    widget.style.setProperty('--adaptive-bg', `rgba(${r}, ${g}, ${b}, 0.55)`);
+    widget.classList.add('adaptive');
+  };
+  img.src = url;
 }
 
 // Kick off polling
