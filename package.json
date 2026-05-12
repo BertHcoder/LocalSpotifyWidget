@@ -1,0 +1,14 @@
+{
+  "name": "spotify-widget-local",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "ISC",
+  "description": "A minimal, fully local Spotify Now Playing widget for OBS Studio.",
+  "dependencies": {
+    "express": "^5.2.1",
+    "open": "^11.0.0"
+  }
+}
