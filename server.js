@@ -94,6 +94,24 @@ app.get('/now-playing', async (_req, res) => {
     if (!data || !data.item) return res.json({ playing: false });
 
     const track = data.item;
+
+    // Fetch the queue for the next upcoming song
+    let nextTitle = null;
+    let nextArtist = null;
+    try {
+      const queueRes = await fetch('https://api.spotify.com/v1/me/player/queue', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (queueRes.ok) {
+        const queueData = await queueRes.json();
+        const next = queueData.queue?.[0];
+        if (next) {
+          nextTitle = next.name;
+          nextArtist = next.artists.map(a => a.name).join(', ');
+        }
+      }
+    } catch { /* queue fetch is best-effort */ }
+
     res.json({
       playing: data.is_playing,
       title: track.name,
@@ -102,6 +120,8 @@ app.get('/now-playing', async (_req, res) => {
       albumArt: track.album.images[0]?.url ?? null,
       progressMs: data.progress_ms,
       durationMs: track.duration_ms,
+      nextTitle,
+      nextArtist,
     });
   } catch (err) {
     console.error('Error fetching now-playing:', err.message);

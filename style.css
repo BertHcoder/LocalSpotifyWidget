@@ -58,12 +58,25 @@ body {
 }
 
 /* ── Progress bar ──────────────────────────────────────────────────── */
+#time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+#time-current, #time-total {
+  font-size: 11px;
+  color: #b3b3b3;
+  flex-shrink: 0;
+  min-width: 28px;
+}
+
 #progress-bar {
-  width: 100%;
+  flex: 1;
   height: 4px;
   background: rgba(255, 255, 255, 0.15);
   border-radius: 2px;
-  margin-top: 4px;
   overflow: hidden;
 }
 
@@ -73,6 +86,16 @@ body {
   border-radius: 2px;
   width: 0%;
   transition: width 1s linear;
+}
+
+/* ── Next track ────────────────────────────────────────────────────── */
+#next-track {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
 }
 
 /* ── Marquee for long titles ───────────────────────────────────────── */
