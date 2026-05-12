@@ -99,7 +99,17 @@ This is **on by default**. To disable it, add `?adaptive=false`:
 http://127.0.0.1:4202/overlay.html?adaptive=false
 ```
 
-You can combine it with themes: `?theme=compact&adaptive=false`.
+To use a **fixed color** instead, pass a name or hex code with `?color=`:
+
+```
+http://127.0.0.1:4202/overlay.html?color=orange
+http://127.0.0.1:4202/overlay.html?color=darkred
+http://127.0.0.1:4202/overlay.html?color=1a1a2e
+```
+
+Supported color names: `red`, `darkred`, `crimson`, `orange`, `lightorange`, `darkorange`, `yellow`, `green`, `darkgreen`, `lightgreen`, `teal`, `cyan`, `blue`, `darkblue`, `lightblue`, `navy`, `purple`, `darkpurple`, `violet`, `indigo`, `lavender`, `pink`, `hotpink`, `brown`, `darkbrown`, `spotify`, `midnight`, and more. Any 6-digit hex code also works.
+
+When `color` is set, adaptive tinting is automatically disabled. Combine with themes: `?theme=compact&color=ff6600`.
 
 ---
 

@@ -1,12 +1,34 @@
 const POLL_INTERVAL = 3000;           // ms between Spotify API polls
 
-// ── Theme from query string (?theme=compact | ?theme=minimal) ─────────
+// ── Options from query string ─────────────────────────────────────────
 const params    = new URLSearchParams(window.location.search);
 const theme     = params.get('theme');
-const adaptive  = params.get('adaptive') !== 'false';   // on by default, ?adaptive=false to disable
+const fixedColor = params.get('color');                   // e.g. ?color=orange or ?color=1a1a2e
+const adaptive  = !fixedColor && params.get('adaptive') !== 'false'; // adaptive off when color is set
 if (theme) document.getElementById('widget').classList.add(`theme-${theme}`);
 
 const widget       = document.getElementById('widget');
+
+function resolveColor(input) {
+  const key = input.toLowerCase().replace(/[^a-z0-9#]/g, '');
+  if (COLOR_NAMES[key]) return COLOR_NAMES[key];
+  const hex = key.replace(/^#/, '');
+  if (/^[0-9a-f]{6}$/i.test(hex)) return hex;
+  return null;
+}
+
+// Apply fixed color immediately if provided
+if (fixedColor) {
+  const hex = resolveColor(fixedColor);
+  if (hex) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    widget.style.setProperty('--adaptive-bg', `rgba(${r}, ${g}, ${b}, 0.55)`);
+    widget.classList.add('adaptive');
+  }
+}
+
 const albumArt     = document.getElementById('album-art');
 const titleSpan    = document.querySelector('#title span');
 const artistEl     = document.getElementById('artist');
