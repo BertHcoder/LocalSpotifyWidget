@@ -52,13 +52,13 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 
 ### 2. Configure
 
-Create a `.env` file in the project root:
+Copy the example env file and fill in your credentials:
 
-```env
-SPOTIFY_CLIENT_ID=your_client_id_here
-SPOTIFY_CLIENT_SECRET=your_client_secret_here
-PORT=4202
+```bash
+cp .env.example .env
 ```
+
+Then edit `.env` with your **Client ID** and **Client Secret** from step 1.
 
 ### 3. Install & Run
 
