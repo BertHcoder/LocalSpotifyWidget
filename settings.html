@@ -159,8 +159,11 @@
         </div>
       </div>
 
-      <div class="field">
-        <label for="opacity">Widget Transparency</label>
+      <div class="toggle-row">
+        <span>Widget Transparency</span>
+        <label class="toggle"><input type="checkbox" id="enableTransparency" /><span class="slider"></span></label>
+      </div>
+      <div id="opacity-slider" class="field hidden" style="margin-top: 8px;">
         <div class="range-row">
           <input type="range" id="opacity" min="10" max="100" step="1" value="100" />
           <span class="range-value" id="opacityValue">100%</span>
@@ -214,6 +217,8 @@
     const showProgressEl = $('#showProgress');
     const showNextEl = $('#showNext');
     const showCodeEl = $('#showCode');
+    const enableTransparencyEl = $('#enableTransparency');
+    const opacitySliderEl = $('#opacity-slider');
     const opacityEl = $('#opacity');
     const opacityValueEl = $('#opacityValue');
     const obsUrlEl = $('#obsUrl');
@@ -232,8 +237,12 @@
         showProgressEl.checked = s.showProgress !== false;
         showNextEl.checked = s.showNext !== false;
         showCodeEl.checked = s.showCode !== false;
-        opacityEl.value = s.opacity ?? 100;
+        const opVal = s.opacity ?? 100;
+        const transparencyOn = opVal < 100;
+        enableTransparencyEl.checked = transparencyOn;
+        opacityEl.value = transparencyOn ? opVal : 80;
         opacityValueEl.textContent = opacityEl.value + '%';
+        toggleOpacitySlider();
         toggleColorPicker();
         updateColorPreview();
         updateObsUrl();
@@ -320,7 +329,7 @@
         showProgress: showProgressEl.checked,
         showNext: showNextEl.checked,
         showCode: showCodeEl.checked,
-        opacity: Number(opacityEl.value),
+        opacity: enableTransparencyEl.checked ? Number(opacityEl.value) : 100,
       };
 
       try {
@@ -342,6 +351,10 @@
     }
 
     // ── Events ───────────────────────────────────────────────
+    function toggleOpacitySlider() {
+      opacitySliderEl.classList.toggle('hidden', !enableTransparencyEl.checked);
+    }
+    enableTransparencyEl.addEventListener('change', toggleOpacitySlider);
     opacityEl.addEventListener('input', () => {
       opacityValueEl.textContent = opacityEl.value + '%';
     });

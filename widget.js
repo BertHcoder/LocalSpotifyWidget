@@ -29,25 +29,40 @@ function resolveColor(input) {
   return null;
 }
 
+function bgAlpha() {
+  return opacity >= 100 ? 1 : 0.55;
+}
+
 function applySettings() {
   // Theme
   widget.className = widget.className.replace(/\btheme-\S+/g, '').trim();
   if (theme) widget.classList.add(`theme-${theme}`);
 
-  // Color
+  const alpha = bgAlpha();
+  const defaultBg = `rgba(18, 18, 18, ${alpha})`;
+
+  // Color — always set inline background so CSS defaults never leak through
   if (fixedColor) {
     const hex = resolveColor(fixedColor);
     if (hex) {
       const r = parseInt(hex.slice(0, 2), 16);
       const g = parseInt(hex.slice(2, 4), 16);
       const b = parseInt(hex.slice(4, 6), 16);
-      widget.style.setProperty('--adaptive-bg', `rgba(${r}, ${g}, ${b}, 0.55)`);
+      const bg = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      widget.style.setProperty('--adaptive-bg', bg);
+      widget.style.background = bg;
       widget.classList.add('adaptive');
     }
     adaptive = false;
-  } else if (!adaptive) {
+  } else if (adaptive) {
+    widget.classList.add('adaptive');
+    widget.style.setProperty('--adaptive-bg', defaultBg);
+    // extractColor will override --adaptive-bg with actual album color
+    widget.style.background = `var(--adaptive-bg, ${defaultBg})`;
+  } else {
     widget.classList.remove('adaptive');
     widget.style.removeProperty('--adaptive-bg');
+    widget.style.background = defaultBg;
   }
 
   // Visibility toggles
@@ -55,7 +70,7 @@ function applySettings() {
   if (nextTrackEl) nextTrackEl.style.display = showNext ? '' : 'none';
   if (spotifyCode) spotifyCode.style.display = showCode ? '' : 'none';
 
-  // Opacity
+  // Opacity (only reduce when transparency is enabled)
   widget.style.opacity = Math.max(0.1, Math.min(1, opacity / 100));
 }
 
@@ -178,7 +193,9 @@ function extractColor(url) {
     canvas.height = 1;
     ctx.drawImage(img, 0, 0, 1, 1);
     const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-    widget.style.setProperty('--adaptive-bg', `rgba(${r}, ${g}, ${b}, 0.55)`);
+    const bg = `rgba(${r}, ${g}, ${b}, ${bgAlpha()})`;
+    widget.style.setProperty('--adaptive-bg', bg);
+    widget.style.background = bg;
     widget.classList.add('adaptive');
   };
   img.src = url;
