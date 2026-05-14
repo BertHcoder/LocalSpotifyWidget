@@ -25,6 +25,8 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 - **Next track preview** — shows what's coming up next in your queue
 - **Podcast & episode support** — detects episodes automatically, shows the podcast/show name in green
 - **Color-adaptive background** — widget background tints to match the album art (disable with `?adaptive=false`)
+- **Custom text color** — override text color manually or let auto-contrast pick black/white based on background
+- **Widget transparency** — adjustable opacity so the widget blends into your scene
 - **Spotify Code** — scannable barcode so viewers can instantly grab the song
 - **Auto-hide** — widget slides out when playback is paused or stopped
 - **Transparent background** — composites cleanly over any OBS scene
@@ -120,6 +122,16 @@ Supported color names: `red`, `darkred`, `crimson`, `orange`, `lightorange`, `da
 
 When `color` is set, adaptive tinting is automatically disabled. Combine with themes: `?theme=compact&color=ff6600`.
 
+### Text Color
+
+By default the widget auto-selects white text on dark backgrounds and black text on light backgrounds.  
+To override, open the settings page and set a custom text color (name or hex).
+
+### Widget Transparency
+
+Enable the "Widget Transparency" toggle on the settings page to reveal an opacity slider.  
+Lower values make the widget semi-transparent so your scene shows through.
+
 ---
 
 ## How It Works
@@ -133,10 +145,14 @@ When `color` is set, adaptive tinting is automatically disabled. Combine with th
 
 | File | Purpose |
 |------|---------|
-| `server.js` | Lightweight Express server — handles Spotify OAuth (PKCE), proxies the API, serves the overlay |
+| `server.js` | Express server — handles Spotify OAuth (PKCE), proxies the API, serves the overlay and settings |
 | `overlay.html` | The page OBS loads as a browser source |
+| `settings.html` | In-browser settings page (theme, colors, toggles) — opens on first run |
+| `settings.json` | Persisted user preferences (auto-generated) |
 | `style.css` | All styling — dark theme, Spotify green accent, smooth animations |
 | `widget.js` | Client-side polling logic, marquee, progress bar updates |
+| `colors.js` | Named color map shared between widget and settings |
+| `build.js` | Bundles the project into a standalone `.exe` for releases |
 
 The overlay polls the local server every **3 seconds**. The server calls the Spotify API, returns a slim JSON payload, and the widget updates in place. Tokens refresh automatically before they expire.
 
@@ -152,10 +168,20 @@ The overlay polls the local server every **3 seconds**. The server calls the Spo
 
 ## Tech Stack
 
-- **Node.js** + **Express 5** — local server (~170 lines)
+- **Node.js** + **Express 5** — local server (~340 lines)
 - **Spotify Web API** — official REST API with OAuth 2.0 PKCE
 - **Vanilla HTML/CSS/JS** — no React, no Vue, no build step, no bundler
 - **2 dependencies** — `express` and `open` (for the initial auth browser tab)
+
+---
+
+## Upcoming: No More Developer App Needed
+
+I'm currently applying for a Spotify app approval. Once approved, the widget will ship with a built-in Client ID — meaning **you won't need to create your own Spotify Developer App anymore**. Setup will be as simple as: install, log in, done.
+
+Until that's approved, you still need to create a free Spotify Developer App (takes 30 seconds, instructions above).
+
+**Testers appreciated!** If you'd like to help test the widget before the app is fully approved, I'd love the help — just open an issue or reach out.
 
 ---
 
