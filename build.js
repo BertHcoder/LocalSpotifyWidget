@@ -31,7 +31,7 @@ execSync(
 );
 
 // Copy static files alongside the exe
-const staticFiles = ['overlay.html', 'style.css', 'widget.js', 'colors.js'];
+const staticFiles = ['overlay.html', 'settings.html', 'style.css', 'widget.js', 'colors.js'];
 for (const file of staticFiles) {
   cpSync(file, `dist/${file}`);
 }

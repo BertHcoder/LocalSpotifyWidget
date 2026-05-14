@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spotify Widget — Settings</title>
+  <style>
+    :root { --green: #1db954; --bg: #121212; --card: #1e1e1e; --text: #fff; --muted: #b3b3b3; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif; min-height: 100vh; display: flex; justify-content: center; padding: 40px 20px; }
+    .container { width: 100%; max-width: 600px; }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+
+    /* ── Cards ─────────────────────────────────────────────── */
+    .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .card h2 { font-size: 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .card h2 .icon { font-size: 18px; }
+
+    /* ── Form elements ────────────────────────────────────── */
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    select, input[type="text"] {
+      width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #333;
+      background: #2a2a2a; color: var(--text); font-size: 14px; outline: none;
+      transition: border-color 0.2s;
+    }
+    select:focus, input[type="text"]:focus { border-color: var(--green); }
+    select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23b3b3b3'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    .hint { font-size: 11px; color: #666; margin-top: 4px; }
+
+    /* ── Toggle ────────────────────────────────────────────── */
+    .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+    .toggle-row span { font-size: 14px; }
+    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
+    .toggle input { display: none; }
+    .toggle .slider { position: absolute; inset: 0; background: #444; border-radius: 12px; transition: background 0.2s; }
+    .toggle .slider::before { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: var(--text); border-radius: 50%; transition: transform 0.2s; }
+    .toggle input:checked + .slider { background: var(--green); }
+    .toggle input:checked + .slider::before { transform: translateX(20px); }
+
+    /* ── Color picker row ─────────────────────────────────── */
+    .color-row { display: flex; gap: 10px; align-items: flex-end; }
+    .color-row .field { flex: 1; }
+    .color-preview { width: 42px; height: 42px; border-radius: 8px; border: 2px solid #333; flex-shrink: 0; }
+
+    /* ── OBS URL ───────────────────────────────────────────── */
+    .url-box { display: flex; gap: 8px; align-items: center; }
+    .url-box input { font-family: 'Consolas', 'Courier New', monospace; font-size: 13px; }
+    .copy-btn {
+      padding: 10px 16px; border: none; border-radius: 8px; background: var(--green);
+      color: #000; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+    .copy-btn:hover { opacity: 0.85; }
+
+    /* ── Save button ──────────────────────────────────────── */
+    .save-btn {
+      width: 100%; padding: 12px; border: none; border-radius: 8px;
+      background: var(--green); color: #000; font-weight: 600; font-size: 15px;
+      cursor: pointer; transition: opacity 0.2s; margin-top: 4px;
+    }
+    .save-btn:hover { opacity: 0.85; }
+    .save-btn.saved { background: #444; color: var(--green); }
+
+    /* ── Preview ──────────────────────────────────────────── */
+    .preview-frame { background: #000; border-radius: 12px; padding: 20px; margin-bottom: 16px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+    .preview-frame iframe { border: none; width: 400px; height: 110px; border-radius: 8px; background: transparent; }
+
+    /* ── Status ────────────────────────────────────────────── */
+    .status-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; padding: 10px 14px; border-radius: 8px; background: var(--card); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-dot.ok { background: var(--green); }
+    .status-dot.no { background: #e74c3c; }
+    .status-text { font-size: 13px; color: var(--muted); }
+    .status-text a { color: var(--green); text-decoration: none; }
+    .status-text a:hover { text-decoration: underline; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Spotify Widget</h1>
+    <p class="subtitle">Configure your OBS Now Playing overlay</p>
+
+    <!-- Auth status -->
+    <div class="status-bar">
+      <div id="status-dot" class="status-dot no"></div>
+      <div id="status-text" class="status-text">Checking…</div>
+    </div>
+
+    <!-- Preview -->
+    <div class="card">
+      <h2><span class="icon">👁</span> Preview</h2>
+      <div class="preview-frame">
+        <iframe id="preview" src="overlay.html"></iframe>
+      </div>
+    </div>
+
+    <!-- Theme -->
+    <div class="card">
+      <h2><span class="icon">🎨</span> Appearance</h2>
+      <div class="field">
+        <label for="theme">Theme</label>
+        <select id="theme">
+          <option value="">Default</option>
+          <option value="compact">Compact</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="colorMode">Background Color</label>
+        <select id="colorMode">
+          <option value="adaptive">Adaptive (from album art)</option>
+          <option value="fixed">Fixed color</option>
+          <option value="none">None (dark)</option>
+        </select>
+      </div>
+
+      <div id="color-picker" class="field hidden">
+        <label for="fixedColor">Color</label>
+        <div class="color-row">
+          <div class="field">
+            <input type="text" id="fixedColor" placeholder="e.g. orange, #1a1a2e, ff5500" />
+            <div class="hint">Named color (orange, crimson…) or 6-digit hex</div>
+          </div>
+          <div id="colorPreview" class="color-preview" style="background: #333;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visibility toggles -->
+    <div class="card">
+      <h2><span class="icon">⚙</span> Elements</h2>
+      <div class="toggle-row">
+        <span>Show progress bar</span>
+        <label class="toggle"><input type="checkbox" id="showProgress" checked /><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span>Show next track</span>
+        <label class="toggle"><input type="checkbox" id="showNext" checked /><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span>Show Spotify code</span>
+        <label class="toggle"><input type="checkbox" id="showCode" checked /><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <!-- OBS URL -->
+    <div class="card">
+      <h2><span class="icon">📋</span> OBS Browser Source URL</h2>
+      <div class="url-box">
+        <input type="text" id="obsUrl" readonly />
+        <button class="copy-btn" id="copyBtn">Copy</button>
+      </div>
+      <div class="hint" style="margin-top: 8px;">Add a Browser Source in OBS and paste this URL. Width: 400, Height: 120.</div>
+    </div>
+
+    <!-- Save -->
+    <button class="save-btn" id="saveBtn">Save Settings</button>
+  </div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const themeEl = $('#theme');
+    const colorModeEl = $('#colorMode');
+    const fixedColorEl = $('#fixedColor');
+    const colorPickerEl = $('#color-picker');
+    const colorPreviewEl = $('#colorPreview');
+    const showProgressEl = $('#showProgress');
+    const showNextEl = $('#showNext');
+    const showCodeEl = $('#showCode');
+    const obsUrlEl = $('#obsUrl');
+    const copyBtn = $('#copyBtn');
+    const saveBtn = $('#saveBtn');
+    const preview = $('#preview');
+
+    // ── Load current settings ────────────────────────────────
+    async function loadSettings() {
+      try {
+        const res = await fetch('/settings');
+        const s = await res.json();
+        themeEl.value = s.theme || '';
+        colorModeEl.value = s.colorMode || 'adaptive';
+        fixedColorEl.value = s.fixedColor || '';
+        showProgressEl.checked = s.showProgress !== false;
+        showNextEl.checked = s.showNext !== false;
+        showCodeEl.checked = s.showCode !== false;
+        toggleColorPicker();
+        updateColorPreview();
+        updateObsUrl();
+      } catch { /* defaults are fine */ }
+    }
+
+    // ── Check auth status ────────────────────────────────────
+    async function checkAuth() {
+      try {
+        const res = await fetch('/now-playing');
+        const data = await res.json();
+        const dot = $('#status-dot');
+        const text = $('#status-text');
+        // If we get a response at all, the server is running and has a token
+        // We check if accessToken is set via a dedicated endpoint
+        const authRes = await fetch('/auth-status');
+        const auth = await authRes.json();
+        if (auth.authenticated) {
+          dot.className = 'status-dot ok';
+          text.innerHTML = 'Connected to Spotify';
+        } else {
+          dot.className = 'status-dot no';
+          text.innerHTML = 'Not authenticated — <a href="/login">Log in to Spotify</a>';
+        }
+      } catch {
+        $('#status-dot').className = 'status-dot no';
+        $('#status-text').textContent = 'Cannot reach server';
+      }
+    }
+
+    // ── UI updates ───────────────────────────────────────────
+    function toggleColorPicker() {
+      colorPickerEl.classList.toggle('hidden', colorModeEl.value !== 'fixed');
+    }
+
+    function updateColorPreview() {
+      const val = fixedColorEl.value.trim();
+      if (!val) { colorPreviewEl.style.background = '#333'; return; }
+      const hex = val.replace(/^#/, '');
+      if (/^[0-9a-f]{6}$/i.test(hex)) {
+        colorPreviewEl.style.background = `#${hex}`;
+      } else {
+        // Try as CSS named color
+        colorPreviewEl.style.background = val;
+      }
+    }
+
+    function updateObsUrl() {
+      const base = `${location.origin}/overlay.html`;
+      obsUrlEl.value = base;
+    }
+
+    function refreshPreview() {
+      preview.src = 'overlay.html?' + Date.now();
+    }
+
+    // ── Save ─────────────────────────────────────────────────
+    async function save() {
+      const settings = {
+        theme: themeEl.value,
+        colorMode: colorModeEl.value,
+        fixedColor: fixedColorEl.value.trim(),
+        showProgress: showProgressEl.checked,
+        showNext: showNextEl.checked,
+        showCode: showCodeEl.checked,
+      };
+
+      try {
+        const res = await fetch('/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings),
+        });
+        if (res.ok) {
+          saveBtn.textContent = 'Saved!';
+          saveBtn.classList.add('saved');
+          setTimeout(() => { saveBtn.textContent = 'Save Settings'; saveBtn.classList.remove('saved'); }, 2000);
+          refreshPreview();
+        }
+      } catch (err) {
+        saveBtn.textContent = 'Error saving';
+        setTimeout(() => { saveBtn.textContent = 'Save Settings'; }, 2000);
+      }
+    }
+
+    // ── Events ───────────────────────────────────────────────
+    colorModeEl.addEventListener('change', toggleColorPicker);
+    fixedColorEl.addEventListener('input', updateColorPreview);
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(obsUrlEl.value);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+    });
+    saveBtn.addEventListener('click', save);
+
+    // ── Init ─────────────────────────────────────────────────
+    loadSettings();
+    checkAuth();
+    updateObsUrl();
+  </script>
+</body>
+</html>

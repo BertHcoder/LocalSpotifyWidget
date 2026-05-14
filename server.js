@@ -1,7 +1,7 @@
 import express from 'express';
 import open from 'open';
 import crypto from 'crypto';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 
 // ── Load .env manually (no extra dependency) ──────────────────────────
 function loadEnv(path = '.env') {
@@ -41,8 +41,38 @@ function generateCodeChallenge(verifier) {
     return crypto.createHash('sha256').update(verifier).digest('base64url');
 }
 
+// ── Settings persistence ──────────────────────────────────────────────
+const SETTINGS_FILE = 'settings.json';
+const DEFAULT_SETTINGS = {
+    theme: '',
+    colorMode: 'adaptive',
+    fixedColor: '',
+    showProgress: true,
+    showNext: true,
+    showCode: true,
+};
+
+function loadSettings() {
+    try {
+        if (existsSync(SETTINGS_FILE)) {
+            return { ...DEFAULT_SETTINGS, ...JSON.parse(readFileSync(SETTINGS_FILE, 'utf-8')) };
+        }
+    } catch { /* fall through */ }
+    return { ...DEFAULT_SETTINGS };
+}
+
+function saveSettings(settings) {
+    const safe = {};
+    for (const key of Object.keys(DEFAULT_SETTINGS)) {
+        safe[key] = settings[key] ?? DEFAULT_SETTINGS[key];
+    }
+    writeFileSync(SETTINGS_FILE, JSON.stringify(safe, null, 2));
+    return safe;
+}
+
 // ── Express app ───────────────────────────────────────────────────────
 const app = express();
+app.use(express.json());
 app.use(express.static('.'));            // serves overlay.html, style.css, etc.
 
 // --- Auth: kick off Spotify login (PKCE) ---
@@ -73,10 +103,29 @@ app.get('/callback', async (req, res) => {
         refreshToken = tokens.refresh_token;
         tokenExpiry = Date.now() + tokens.expires_in * 1000;
         console.log('Authenticated successfully!');
-        res.send('<h2>Authenticated! You can close this tab.</h2><script>window.close()</script>');
+        res.redirect('/settings.html');
     } catch (err) {
         console.error('Token exchange failed:', err.message ?? err);
         res.status(500).send(`<h2>Token exchange failed</h2><pre>${err.message ?? err}</pre><p>Make sure your Spotify account is added to the app's user allowlist in the <a href="https://developer.spotify.com/dashboard">Developer Dashboard</a>.</p>`);
+    }
+});
+
+// --- API: auth status ---
+app.get('/auth-status', (_req, res) => {
+    res.json({ authenticated: !!accessToken });
+});
+
+// --- API: settings ---
+app.get('/settings', (_req, res) => {
+    res.json(loadSettings());
+});
+
+app.post('/settings', (req, res) => {
+    try {
+        const saved = saveSettings(req.body);
+        res.json(saved);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -193,7 +242,8 @@ async function ensureFreshToken() {
 // ── Start ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
     console.log(`\n  Spotify Widget running at http://127.0.0.1:${PORT}`);
+    console.log(`  Settings:                 http://127.0.0.1:${PORT}/settings.html`);
     console.log(`  OBS browser source URL:   http://127.0.0.1:${PORT}/overlay.html`);
-    console.log(`\n  Opening browser to authenticate with Spotify...\n`);
-    open(`http://127.0.0.1:${PORT}/login`);
+    console.log();
+    open(`http://127.0.0.1:${PORT}/settings.html`);
 });
