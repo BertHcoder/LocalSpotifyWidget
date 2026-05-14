@@ -68,6 +68,7 @@ const DEFAULT_SETTINGS = {
     showProgress: true,
     showNext: true,
     showCode: true,
+    opacity: 100,
 };
 
 function loadSettings() {
@@ -141,7 +142,20 @@ app.get('/callback', async (req, res) => {
 
 // --- API: auth status ---
 app.get('/auth-status', (_req, res) => {
-    res.json({ authenticated: !!accessToken });
+    res.json({
+        authenticated: !!accessToken,
+        tokenExpiry: tokenExpiry || null,
+        expiresIn: tokenExpiry ? Math.max(0, tokenExpiry - Date.now()) : null,
+    });
+});
+
+// --- API: logout (clear tokens) ---
+app.post('/logout', (_req, res) => {
+    accessToken = null;
+    refreshToken = null;
+    tokenExpiry = 0;
+    saveTokens();
+    res.json({ ok: true });
 });
 
 // --- SSE: push settings changes to overlay clients ---
@@ -292,10 +306,22 @@ async function ensureFreshToken() {
 }
 
 // ── Start ─────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`\n  Spotify Widget running at http://127.0.0.1:${PORT}`);
     console.log(`  Settings:                 http://127.0.0.1:${PORT}/settings.html`);
     console.log(`  OBS browser source URL:   http://127.0.0.1:${PORT}/overlay.html`);
+
+    if (refreshToken) {
+        try {
+            await ensureFreshToken();
+            console.log('  Restored session from saved tokens — no login needed.');
+        } catch {
+            console.log('  Saved tokens expired — opening browser to log in.');
+            open(`http://127.0.0.1:${PORT}/settings.html`);
+        }
+    } else {
+        console.log('  No saved session — opening browser to log in.');
+        open(`http://127.0.0.1:${PORT}/settings.html`);
+    }
     console.log();
-    open(`http://127.0.0.1:${PORT}/settings.html`);
 });

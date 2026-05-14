@@ -30,6 +30,23 @@
     .field:last-child { margin-bottom: 0; }
     .hint { font-size: 11px; color: #666; margin-top: 4px; }
 
+    /* ── Range slider ──────────────────────────────────────── */
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+      background: #333; border-radius: 3px; outline: none; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+      background: var(--green); cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 50%; background: var(--green);
+      border: none; cursor: pointer;
+    }
+    .range-row { display: flex; align-items: center; gap: 12px; }
+    .range-row input[type="range"] { flex: 1; }
+    .range-value { font-size: 14px; min-width: 40px; text-align: right; }
+
     /* ── Toggle ────────────────────────────────────────────── */
     .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
     .toggle-row span { font-size: 14px; }
@@ -79,6 +96,14 @@
     .status-text a { color: var(--green); text-decoration: none; }
     .status-text a:hover { text-decoration: underline; }
 
+    /* ── Logout button ────────────────────────────────────── */
+    .logout-btn {
+      margin-left: auto; padding: 5px 14px; border: 1px solid #e74c3c; border-radius: 6px;
+      background: transparent; color: #e74c3c; font-size: 12px; cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .logout-btn:hover { background: #e74c3c; color: #fff; }
+
     .hidden { display: none !important; }
   </style>
 </head>
@@ -91,6 +116,7 @@
     <div class="status-bar">
       <div id="status-dot" class="status-dot no"></div>
       <div id="status-text" class="status-text">Checking…</div>
+      <button id="logoutBtn" class="logout-btn hidden">Log out</button>
     </div>
 
     <!-- Preview -->
@@ -131,6 +157,15 @@
           </div>
           <input type="color" id="colorPreview" class="color-preview" value="#333333" title="Pick a color" />
         </div>
+      </div>
+
+      <div class="field">
+        <label for="opacity">Widget Transparency</label>
+        <div class="range-row">
+          <input type="range" id="opacity" min="10" max="100" step="1" value="100" />
+          <span class="range-value" id="opacityValue">100%</span>
+        </div>
+        <div class="hint">Lower values make the widget more transparent in OBS</div>
       </div>
     </div>
 
@@ -179,6 +214,8 @@
     const showProgressEl = $('#showProgress');
     const showNextEl = $('#showNext');
     const showCodeEl = $('#showCode');
+    const opacityEl = $('#opacity');
+    const opacityValueEl = $('#opacityValue');
     const obsUrlEl = $('#obsUrl');
     const copyBtn = $('#copyBtn');
     const saveBtn = $('#saveBtn');
@@ -195,6 +232,8 @@
         showProgressEl.checked = s.showProgress !== false;
         showNextEl.checked = s.showNext !== false;
         showCodeEl.checked = s.showCode !== false;
+        opacityEl.value = s.opacity ?? 100;
+        opacityValueEl.textContent = opacityEl.value + '%';
         toggleColorPicker();
         updateColorPreview();
         updateObsUrl();
@@ -202,26 +241,39 @@
     }
 
     // ── Check auth status ────────────────────────────────────
+    function formatExpiry(ms) {
+      if (!ms) return '';
+      const totalMin = Math.floor(ms / 60000);
+      if (totalMin < 1) return 'less than a minute';
+      if (totalMin < 60) return `${totalMin}m`;
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      return m ? `${h}h ${m}m` : `${h}h`;
+    }
+
     async function checkAuth() {
       try {
-        const res = await fetch('/now-playing');
-        const data = await res.json();
         const dot = $('#status-dot');
         const text = $('#status-text');
-        // If we get a response at all, the server is running and has a token
-        // We check if accessToken is set via a dedicated endpoint
+        const logoutBtn = $('#logoutBtn');
         const authRes = await fetch('/auth-status');
         const auth = await authRes.json();
         if (auth.authenticated) {
           dot.className = 'status-dot ok';
-          text.innerHTML = 'Connected to Spotify';
+          const expiry = auth.expiresIn
+            ? ` · token refreshes in ${formatExpiry(auth.expiresIn)}`
+            : '';
+          text.innerHTML = `Connected to Spotify${expiry}`;
+          logoutBtn.classList.remove('hidden');
         } else {
           dot.className = 'status-dot no';
           text.innerHTML = 'Not authenticated — <a href="/login">Log in to Spotify</a>';
+          logoutBtn.classList.add('hidden');
         }
       } catch {
         $('#status-dot').className = 'status-dot no';
         $('#status-text').textContent = 'Cannot reach server';
+        $('#logoutBtn').classList.add('hidden');
       }
     }
 
@@ -268,6 +320,7 @@
         showProgress: showProgressEl.checked,
         showNext: showNextEl.checked,
         showCode: showCodeEl.checked,
+        opacity: Number(opacityEl.value),
       };
 
       try {
@@ -289,6 +342,9 @@
     }
 
     // ── Events ───────────────────────────────────────────────
+    opacityEl.addEventListener('input', () => {
+      opacityValueEl.textContent = opacityEl.value + '%';
+    });
     colorModeEl.addEventListener('change', toggleColorPicker);
     fixedColorEl.addEventListener('input', updateColorPreview);
     colorPreviewEl.addEventListener('input', () => {
@@ -300,11 +356,17 @@
       setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
     });
     saveBtn.addEventListener('click', save);
+    $('#logoutBtn').addEventListener('click', async () => {
+      await fetch('/logout', { method: 'POST' });
+      checkAuth();
+    });
 
     // ── Init ─────────────────────────────────────────────────
     loadSettings();
     checkAuth();
     updateObsUrl();
+    // Refresh auth status every 60s to keep expiry display current
+    setInterval(checkAuth, 60000);
   </script>
 </body>
 </html>

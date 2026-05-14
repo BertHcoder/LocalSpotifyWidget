@@ -7,6 +7,7 @@ let adaptive = true;
 let showProgress = true;
 let showNext = true;
 let showCode = true;
+let opacity = 100;
 
 const widget = document.getElementById('widget');
 const albumArt = document.getElementById('album-art');
@@ -53,6 +54,9 @@ function applySettings() {
   if (timeRow) timeRow.style.display = showProgress ? '' : 'none';
   if (nextTrackEl) nextTrackEl.style.display = showNext ? '' : 'none';
   if (spotifyCode) spotifyCode.style.display = showCode ? '' : 'none';
+
+  // Opacity
+  widget.style.opacity = Math.max(0.1, Math.min(1, opacity / 100));
 }
 
 async function loadSettings() {
@@ -74,6 +78,7 @@ async function loadSettings() {
     showProgress = s.showProgress !== false;
     showNext = s.showNext !== false;
     showCode = s.showCode !== false;
+    opacity = s.opacity ?? 100;
   } catch { /* defaults are fine */ }
 
   // Query params override server settings
@@ -199,6 +204,7 @@ function connectSettingsStream() {
       showProgress = s.showProgress !== false;
       showNext = s.showNext !== false;
       showCode = s.showCode !== false;
+      opacity = s.opacity ?? 100;
       applySettings();
       // Re-extract color for current album art if switching to adaptive
       if (adaptive && albumArt.src) extractColor(albumArt.src);
