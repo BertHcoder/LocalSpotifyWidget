@@ -51,14 +51,14 @@ body {
 #title span {
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-color, #fff);
   white-space: nowrap;
   display: inline-block;
 }
 
 #artist {
   font-size: 13px;
-  color: #b3b3b3;
+  color: var(--muted-color, #b3b3b3);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -74,7 +74,7 @@ body {
 
 #time-current, #time-total {
   font-size: 11px;
-  color: #b3b3b3;
+  color: var(--muted-color, #b3b3b3);
   flex-shrink: 0;
   min-width: 28px;
 }
@@ -126,7 +126,7 @@ body {
 /* ── Next track ────────────────────────────────────────────────────── */
 #next-track {
   font-size: 11px;
-  color: #888;
+  color: var(--muted-color, #888);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

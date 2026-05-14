@@ -119,6 +119,20 @@
       <button id="logoutBtn" class="logout-btn hidden">Log out</button>
     </div>
 
+    <!-- Spotify App Setup -->
+    <div class="card" id="clientIdCard">
+      <h2><span class="icon">🔑</span> Spotify App</h2>
+      <div class="field">
+        <label for="clientId">Client ID</label>
+        <input type="text" id="clientId" placeholder="Paste your Spotify Client ID here" spellcheck="false" />
+        <div class="hint" style="margin-top: 6px;">
+          Create a free app at <a href="https://developer.spotify.com/dashboard" target="_blank" style="color: var(--green);">developer.spotify.com/dashboard</a>.<br>
+          Set the Redirect URI to <code style="color: var(--green);">http://127.0.0.1:4202/callback</code>
+        </div>
+      </div>
+      <button class="save-btn" id="saveClientIdBtn" style="margin-top: 12px;">Save &amp; Log In</button>
+    </div>
+
     <!-- Preview -->
     <div class="card">
       <h2><span class="icon">👁</span> Preview</h2>
@@ -156,6 +170,17 @@
             <div class="hint">Named color (orange, crimson…) or 6-digit hex</div>
           </div>
           <input type="color" id="colorPreview" class="color-preview" value="#333333" title="Pick a color" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="textColor">Text Color</label>
+        <div class="color-row">
+          <div class="field">
+            <input type="text" id="textColor" placeholder="auto (black on light, white on dark)" />
+            <div class="hint">Leave empty for auto-contrast. Named color or 6-digit hex.</div>
+          </div>
+          <input type="color" id="textColorPreview" class="color-preview" value="#ffffff" title="Pick a text color" />
         </div>
       </div>
 
@@ -214,6 +239,8 @@
     const fixedColorEl = $('#fixedColor');
     const colorPickerEl = $('#color-picker');
     const colorPreviewEl = $('#colorPreview');
+    const textColorEl = $('#textColor');
+    const textColorPreviewEl = $('#textColorPreview');
     const showProgressEl = $('#showProgress');
     const showNextEl = $('#showNext');
     const showCodeEl = $('#showCode');
@@ -225,15 +252,20 @@
     const copyBtn = $('#copyBtn');
     const saveBtn = $('#saveBtn');
     const preview = $('#preview');
+    const clientIdEl = $('#clientId');
+    const clientIdCard = $('#clientIdCard');
+    const saveClientIdBtn = $('#saveClientIdBtn');
 
     // ── Load current settings ────────────────────────────────
     async function loadSettings() {
       try {
         const res = await fetch('/settings');
         const s = await res.json();
+        clientIdEl.value = s.clientId || '';
         themeEl.value = s.theme || '';
         colorModeEl.value = s.colorMode || 'adaptive';
         fixedColorEl.value = s.fixedColor || '';
+        textColorEl.value = s.textColor || '';
         showProgressEl.checked = s.showProgress !== false;
         showNextEl.checked = s.showNext !== false;
         showCodeEl.checked = s.showCode !== false;
@@ -245,6 +277,9 @@
         toggleOpacitySlider();
         toggleColorPicker();
         updateColorPreview();
+        // Update text color preview
+        const tc = (s.textColor || '').replace(/^#/, '');
+        textColorPreviewEl.value = /^[0-9a-f]{6}$/i.test(tc) ? `#${tc}` : '#ffffff';
         updateObsUrl();
       } catch { /* defaults are fine */ }
     }
@@ -274,15 +309,20 @@
             : '';
           text.innerHTML = `Connected to Spotify${expiry}`;
           logoutBtn.classList.remove('hidden');
+          clientIdCard.classList.add('hidden');
         } else {
           dot.className = 'status-dot no';
-          text.innerHTML = 'Not authenticated — <a href="/login">Log in to Spotify</a>';
+          text.innerHTML = clientIdEl.value.trim()
+            ? 'Not authenticated — <a href="/login">Log in to Spotify</a>'
+            : 'Not authenticated — enter your Client ID below';
           logoutBtn.classList.add('hidden');
+          clientIdCard.classList.remove('hidden');
         }
       } catch {
         $('#status-dot').className = 'status-dot no';
         $('#status-text').textContent = 'Cannot reach server';
         $('#logoutBtn').classList.add('hidden');
+        clientIdCard.classList.remove('hidden');
       }
     }
 
@@ -323,9 +363,11 @@
     // ── Save ─────────────────────────────────────────────────
     async function save() {
       const settings = {
+        clientId: clientIdEl.value.trim(),
         theme: themeEl.value,
         colorMode: colorModeEl.value,
         fixedColor: fixedColorEl.value.trim(),
+        textColor: textColorEl.value.trim(),
         showProgress: showProgressEl.checked,
         showNext: showNextEl.checked,
         showCode: showCodeEl.checked,
@@ -363,6 +405,15 @@
     colorPreviewEl.addEventListener('input', () => {
       fixedColorEl.value = colorPreviewEl.value;
     });
+    textColorEl.addEventListener('input', () => {
+      const val = textColorEl.value.trim();
+      if (!val) { textColorPreviewEl.value = '#ffffff'; return; }
+      const hex = val.replace(/^#/, '');
+      if (/^[0-9a-f]{6}$/i.test(hex)) { textColorPreviewEl.value = `#${hex}`; }
+    });
+    textColorPreviewEl.addEventListener('input', () => {
+      textColorEl.value = textColorPreviewEl.value;
+    });
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(obsUrlEl.value);
       copyBtn.textContent = 'Copied!';
@@ -373,11 +424,26 @@
       await fetch('/logout', { method: 'POST' });
       checkAuth();
     });
+    saveClientIdBtn.addEventListener('click', async () => {
+      const id = clientIdEl.value.trim();
+      if (!id) { clientIdEl.focus(); return; }
+      await fetch('/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: id }),
+      });
+      window.location.href = '/login';
+    });
 
     // ── Init ─────────────────────────────────────────────────
     loadSettings();
     checkAuth();
     updateObsUrl();
+    // Show error if redirected back for missing client ID
+    if (new URLSearchParams(location.search).get('error') === 'missing_client_id') {
+      clientIdEl.focus();
+      clientIdEl.style.borderColor = '#e74c3c';
+    }
     // Refresh auth status every 60s to keep expiry display current
     setInterval(checkAuth, 60000);
   </script>

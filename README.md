@@ -17,7 +17,7 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 
 ## Features
 
-- **Zero configuration** — no Spotify developer account needed, just log in with your Spotify account
+- **Easy setup** — create a free Spotify app, paste your Client ID, and you're running
 - **Album art** — full-res cover pulled straight from the Spotify API
 - **Track title with auto-scroll** — long titles get a smooth marquee animation instead of ugly truncation
 - **Artist name** — all featured artists, comma-separated
@@ -33,7 +33,6 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 ## What It Doesn't Do
 
 - Phone home to anyone
-- Require a Spotify developer account, API keys, or any configuration
 - Require Docker, databases, accounts, subscriptions, or "pro tiers"
 - Install 600 MB of Electron to show one widget
 - Break when Spotify changes their website layout (it uses the official API)
@@ -58,10 +57,18 @@ git clone https://github.com/BertHcoder/LocalSpotifyWidget.git
 
 - **Node.js** 18+ — [download here](https://nodejs.org)
 - A **Spotify account** (free or Premium)
+- A **Spotify Developer App** (free, takes 30 seconds — see below)
 
-That's it. No developer account, no API keys, no config files.
+### 1. Create a Spotify App
 
-### 1. Install & Run
+1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+2. Click **Create App**.
+3. Fill in any name/description (e.g. "My OBS Widget").
+4. Set the **Redirect URI** to: `http://127.0.0.1:4202/callback`
+5. Check **Web API** under "Which APIs are you planning to use?"
+6. Save. Copy your **Client ID** (you'll paste it into the widget).
+
+### 2. Install & Run
 
 ```bash
 cd LocalSpotifyWidget
@@ -69,10 +76,10 @@ npm install
 npm start
 ```
 
-Your browser opens automatically — log in with your Spotify account and click **Agree**.  
-Close the tab when it says "Authenticated!" — you're done.
+Your browser opens the settings page automatically.  
+Paste your **Client ID** and click **Save & Log In** — authorize with Spotify and you're done.
 
-### 2. Add to OBS
+### 3. Add to OBS
 
 1. In OBS, add a **Browser Source**.
 2. Set the URL to `http://127.0.0.1:4202/overlay.html`.

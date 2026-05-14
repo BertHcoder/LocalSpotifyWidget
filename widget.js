@@ -8,6 +8,7 @@ let showProgress = true;
 let showNext = true;
 let showCode = true;
 let opacity = 100;
+let textColor = null;
 
 const widget = document.getElementById('widget');
 const albumArt = document.getElementById('album-art');
@@ -27,6 +28,35 @@ function resolveColor(input) {
   const hex = key.replace(/^#/, '');
   if (/^[0-9a-f]{6}$/i.test(hex)) return hex;
   return null;
+}
+
+function isLightColor(hex) {
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  // Relative luminance formula
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6;
+}
+
+function applyTextColor(bgHex) {
+  // If user set a manual text color, use it
+  if (textColor) {
+    const hex = resolveColor(textColor);
+    if (hex) {
+      widget.style.setProperty('--text-color', `#${hex}`);
+      widget.style.setProperty('--muted-color', `#${hex}cc`);
+      return;
+    }
+  }
+  // Auto-contrast: dark text on light backgrounds
+  if (bgHex && isLightColor(bgHex)) {
+    widget.style.setProperty('--text-color', '#000000');
+    widget.style.setProperty('--muted-color', '#333333');
+  } else {
+    widget.style.setProperty('--text-color', '#ffffff');
+    widget.style.setProperty('--muted-color', '#b3b3b3');
+  }
 }
 
 function bgAlpha() {
@@ -52,6 +82,7 @@ function applySettings() {
       widget.style.setProperty('--adaptive-bg', bg);
       widget.style.background = bg;
       widget.classList.add('adaptive');
+      applyTextColor(hex);
     }
     adaptive = false;
   } else if (adaptive) {
@@ -59,10 +90,12 @@ function applySettings() {
     widget.style.setProperty('--adaptive-bg', defaultBg);
     // extractColor will override --adaptive-bg with actual album color
     widget.style.background = `var(--adaptive-bg, ${defaultBg})`;
+    applyTextColor('121212'); // default dark, will be updated by extractColor
   } else {
     widget.classList.remove('adaptive');
     widget.style.removeProperty('--adaptive-bg');
     widget.style.background = defaultBg;
+    applyTextColor('121212');
   }
 
   // Visibility toggles
@@ -94,6 +127,7 @@ async function loadSettings() {
     showNext = s.showNext !== false;
     showCode = s.showCode !== false;
     opacity = s.opacity ?? 100;
+    textColor = s.textColor || null;
   } catch { /* defaults are fine */ }
 
   // Query params override server settings
@@ -197,6 +231,8 @@ function extractColor(url) {
     widget.style.setProperty('--adaptive-bg', bg);
     widget.style.background = bg;
     widget.classList.add('adaptive');
+    const hex = [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+    applyTextColor(hex);
   };
   img.src = url;
 }
@@ -222,6 +258,7 @@ function connectSettingsStream() {
       showNext = s.showNext !== false;
       showCode = s.showCode !== false;
       opacity = s.opacity ?? 100;
+      textColor = s.textColor || null;
       applySettings();
       // Re-extract color for current album art if switching to adaptive
       if (adaptive && albumArt.src) extractColor(albumArt.src);

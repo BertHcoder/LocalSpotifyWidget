@@ -20,10 +20,13 @@ function loadEnv(path = '.env') {
 loadEnv();
 
 // ── Config ────────────────────────────────────────────────────────────
-const CLIENT_ID = '239bbb8c943a4360b6152c43d332cd30';
 const PORT = Number(process.env.PORT) || 4202;
 const REDIRECT_URI = `http://127.0.0.1:${PORT}/callback`;
 const SCOPES = 'user-read-currently-playing user-read-playback-state';
+
+function getClientId() {
+    return loadSettings().clientId || '';
+}
 
 // ── Token state ───────────────────────────────────────────────────────
 const TOKEN_FILE = 'tokens.json';
@@ -62,6 +65,7 @@ function generateCodeChallenge(verifier) {
 // ── Settings persistence ──────────────────────────────────────────────
 const SETTINGS_FILE = 'settings.json';
 const DEFAULT_SETTINGS = {
+    clientId: '',
     theme: '',
     colorMode: 'adaptive',
     fixedColor: '',
@@ -106,12 +110,16 @@ app.use(express.static('.'));            // serves overlay.html, style.css, etc.
 
 // --- Auth: kick off Spotify login (PKCE) ---
 app.get('/login', (_req, res) => {
+    const clientId = getClientId();
+    if (!clientId) {
+        return res.redirect('/settings.html?error=missing_client_id');
+    }
     const state = crypto.randomBytes(16).toString('hex');
     codeVerifier = generateCodeVerifier();
     const codeChallenge = generateCodeChallenge(codeVerifier);
     const params = new URLSearchParams({
         response_type: 'code',
-        client_id: CLIENT_ID,
+        client_id: clientId,
         scope: SCOPES,
         redirect_uri: REDIRECT_URI,
         state,
@@ -144,6 +152,7 @@ app.get('/callback', async (req, res) => {
 app.get('/auth-status', (_req, res) => {
     res.json({
         authenticated: !!accessToken,
+        hasClientId: !!getClientId(),
         tokenExpiry: tokenExpiry || null,
         expiresIn: tokenExpiry ? Math.max(0, tokenExpiry - Date.now()) : null,
     });
@@ -265,7 +274,7 @@ async function exchangeCode(code) {
         grant_type: 'authorization_code',
         code,
         redirect_uri: REDIRECT_URI,
-        client_id: CLIENT_ID,
+        client_id: getClientId(),
         code_verifier: codeVerifier,
     });
     const resp = await fetch('https://accounts.spotify.com/api/token', {
@@ -284,7 +293,7 @@ async function refreshAccessToken() {
     const body = new URLSearchParams({
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
-        client_id: CLIENT_ID,
+        client_id: getClientId(),
     });
     const resp = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
