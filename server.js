@@ -20,37 +20,44 @@ function loadEnv(path = '.env') {
 loadEnv();
 
 // ── Config ────────────────────────────────────────────────────────────
-const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
-const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
+const CLIENT_ID = '239bbb8c943a4360b6152c43d332cd30';
 const PORT = Number(process.env.PORT) || 4202;
 const REDIRECT_URI = `http://127.0.0.1:${PORT}/callback`;
 const SCOPES = 'user-read-currently-playing user-read-playback-state';
-
-if (!CLIENT_ID || !CLIENT_SECRET) {
-    console.error('Missing SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET in .env');
-    process.exit(1);
-}
-
-console.log('  Redirect URI:', REDIRECT_URI);
 
 // ── Token state ───────────────────────────────────────────────────────
 let accessToken = null;
 let refreshToken = null;
 let tokenExpiry = 0;
 
+// ── PKCE helpers ──────────────────────────────────────────────────────
+let codeVerifier = null;
+
+function generateCodeVerifier() {
+    return crypto.randomBytes(64).toString('base64url');
+}
+
+function generateCodeChallenge(verifier) {
+    return crypto.createHash('sha256').update(verifier).digest('base64url');
+}
+
 // ── Express app ───────────────────────────────────────────────────────
 const app = express();
 app.use(express.static('.'));            // serves overlay.html, style.css, etc.
 
-// --- Auth: kick off Spotify login ---
+// --- Auth: kick off Spotify login (PKCE) ---
 app.get('/login', (_req, res) => {
     const state = crypto.randomBytes(16).toString('hex');
+    codeVerifier = generateCodeVerifier();
+    const codeChallenge = generateCodeChallenge(codeVerifier);
     const params = new URLSearchParams({
         response_type: 'code',
         client_id: CLIENT_ID,
         scope: SCOPES,
         redirect_uri: REDIRECT_URI,
         state,
+        code_challenge_method: 'S256',
+        code_challenge: codeChallenge,
     });
     res.redirect(`https://accounts.spotify.com/authorize?${params}`);
 });
@@ -137,19 +144,18 @@ app.get('/now-playing', async (_req, res) => {
     }
 });
 
-// ── Spotify token helpers ─────────────────────────────────────────────
+// ── Spotify token helpers (PKCE — no client secret) ──────────────────
 async function exchangeCode(code) {
     const body = new URLSearchParams({
         grant_type: 'authorization_code',
         code,
         redirect_uri: REDIRECT_URI,
+        client_id: CLIENT_ID,
+        code_verifier: codeVerifier,
     });
     const resp = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            Authorization: `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`,
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
     });
     if (!resp.ok) {
@@ -163,13 +169,11 @@ async function refreshAccessToken() {
     const body = new URLSearchParams({
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
+        client_id: CLIENT_ID,
     });
     const resp = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            Authorization: `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`,
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
     });
     if (!resp.ok) throw new Error(`Token refresh: ${resp.status}`);
