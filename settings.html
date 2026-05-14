@@ -43,7 +43,9 @@
     /* ── Color picker row ─────────────────────────────────── */
     .color-row { display: flex; gap: 10px; align-items: flex-end; }
     .color-row .field { flex: 1; }
-    .color-preview { width: 42px; height: 42px; border-radius: 8px; border: 2px solid #333; flex-shrink: 0; }
+    .color-preview { width: 42px; height: 42px; border-radius: 8px; border: 2px solid #333; flex-shrink: 0; cursor: pointer; padding: 2px; background: none; }
+    .color-preview::-webkit-color-swatch-wrapper { padding: 0; }
+    .color-preview::-webkit-color-swatch { border: none; border-radius: 6px; }
 
     /* ── OBS URL ───────────────────────────────────────────── */
     .url-box { display: flex; gap: 8px; align-items: center; }
@@ -127,7 +129,7 @@
             <input type="text" id="fixedColor" placeholder="e.g. orange, #1a1a2e, ff5500" />
             <div class="hint">Named color (orange, crimson…) or 6-digit hex</div>
           </div>
-          <div id="colorPreview" class="color-preview" style="background: #333;"></div>
+          <input type="color" id="colorPreview" class="color-preview" value="#333333" title="Pick a color" />
         </div>
       </div>
     </div>
@@ -144,7 +146,10 @@
         <label class="toggle"><input type="checkbox" id="showNext" checked /><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <span>Show Spotify code</span>
+        <div>
+          <span>Show Spotify code</span>
+          <div class="hint" style="margin-top: 2px;">A scannable barcode — viewers can scan it with their phone to open the song in Spotify.</div>
+        </div>
         <label class="toggle"><input type="checkbox" id="showCode" checked /><span class="slider"></span></label>
       </div>
     </div>
@@ -157,6 +162,7 @@
         <button class="copy-btn" id="copyBtn">Copy</button>
       </div>
       <div class="hint" style="margin-top: 8px;">Add a Browser Source in OBS and paste this URL. Width: 400, Height: 120.</div>
+      <div class="hint" style="margin-top: 6px;">💡 <strong>Tip:</strong> In the OBS Browser Source properties, enable <em>"Refresh browser when scene becomes active"</em> so the widget picks up new settings automatically without needing to clear the cache.</div>
     </div>
 
     <!-- Save -->
@@ -226,13 +232,21 @@
 
     function updateColorPreview() {
       const val = fixedColorEl.value.trim();
-      if (!val) { colorPreviewEl.style.background = '#333'; return; }
+      if (!val) { colorPreviewEl.value = '#333333'; return; }
       const hex = val.replace(/^#/, '');
       if (/^[0-9a-f]{6}$/i.test(hex)) {
-        colorPreviewEl.style.background = `#${hex}`;
+        colorPreviewEl.value = `#${hex}`;
       } else {
-        // Try as CSS named color
-        colorPreviewEl.style.background = val;
+        // Resolve named color via a temp element
+        const tmp = document.createElement('span');
+        tmp.style.color = val;
+        document.body.appendChild(tmp);
+        const resolved = getComputedStyle(tmp).color;
+        document.body.removeChild(tmp);
+        const m = resolved.match(/\d+/g);
+        if (m && m.length >= 3) {
+          colorPreviewEl.value = '#' + m.slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('');
+        }
       }
     }
 
@@ -277,6 +291,9 @@
     // ── Events ───────────────────────────────────────────────
     colorModeEl.addEventListener('change', toggleColorPicker);
     fixedColorEl.addEventListener('input', updateColorPreview);
+    colorPreviewEl.addEventListener('input', () => {
+      fixedColorEl.value = colorPreviewEl.value;
+    });
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(obsUrlEl.value);
       copyBtn.textContent = 'Copied!';

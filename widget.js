@@ -179,8 +179,37 @@ function extractColor(url) {
   img.src = url;
 }
 
-// Kick off: load settings, then start polling
+// ── SSE: auto-apply settings pushed from server ───────────────────────
+function connectSettingsStream() {
+  const es = new EventSource('/settings-stream');
+  es.onmessage = (event) => {
+    try {
+      const s = JSON.parse(event.data);
+      theme = s.theme || null;
+      if (s.colorMode === 'fixed' && s.fixedColor) {
+        fixedColor = s.fixedColor;
+        adaptive = false;
+      } else if (s.colorMode === 'none') {
+        adaptive = false;
+        fixedColor = null;
+      } else {
+        adaptive = true;
+        fixedColor = null;
+      }
+      showProgress = s.showProgress !== false;
+      showNext = s.showNext !== false;
+      showCode = s.showCode !== false;
+      applySettings();
+      // Re-extract color for current album art if switching to adaptive
+      if (adaptive && albumArt.src) extractColor(albumArt.src);
+      lastTrackId = null; // force full UI refresh on next poll
+    } catch { /* ignore malformed events */ }
+  };
+}
+
+// Kick off: load settings, connect SSE, then start polling
 loadSettings().then(() => {
+  connectSettingsStream();
   poll();
   setInterval(poll, POLL_INTERVAL);
 });

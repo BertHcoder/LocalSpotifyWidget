@@ -26,9 +26,27 @@ const REDIRECT_URI = `http://127.0.0.1:${PORT}/callback`;
 const SCOPES = 'user-read-currently-playing user-read-playback-state';
 
 // ── Token state ───────────────────────────────────────────────────────
+const TOKEN_FILE = 'tokens.json';
 let accessToken = null;
 let refreshToken = null;
 let tokenExpiry = 0;
+
+function loadTokens() {
+    try {
+        if (existsSync(TOKEN_FILE)) {
+            const data = JSON.parse(readFileSync(TOKEN_FILE, 'utf-8'));
+            accessToken = data.accessToken ?? null;
+            refreshToken = data.refreshToken ?? null;
+            tokenExpiry = data.tokenExpiry ?? 0;
+        }
+    } catch { /* ignore corrupt file */ }
+}
+
+function saveTokens() {
+    writeFileSync(TOKEN_FILE, JSON.stringify({ accessToken, refreshToken, tokenExpiry }, null, 2));
+}
+
+loadTokens();
 
 // ── PKCE helpers ──────────────────────────────────────────────────────
 let codeVerifier = null;
@@ -73,6 +91,16 @@ function saveSettings(settings) {
 // ── Express app ───────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
+
+// Block sensitive files from being served statically
+app.use((req, res, next) => {
+    const blocked = ['/tokens.json', '/settings.json', '/.env'];
+    if (blocked.includes(req.path.toLowerCase())) {
+        return res.status(404).end();
+    }
+    next();
+});
+
 app.use(express.static('.'));            // serves overlay.html, style.css, etc.
 
 // --- Auth: kick off Spotify login (PKCE) ---
@@ -102,6 +130,7 @@ app.get('/callback', async (req, res) => {
         accessToken = tokens.access_token;
         refreshToken = tokens.refresh_token;
         tokenExpiry = Date.now() + tokens.expires_in * 1000;
+        saveTokens();
         console.log('Authenticated successfully!');
         res.redirect('/settings.html');
     } catch (err) {
@@ -115,6 +144,27 @@ app.get('/auth-status', (_req, res) => {
     res.json({ authenticated: !!accessToken });
 });
 
+// --- SSE: push settings changes to overlay clients ---
+const sseClients = new Set();
+
+app.get('/settings-stream', (req, res) => {
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+    });
+    res.write('\n');
+    sseClients.add(res);
+    req.on('close', () => sseClients.delete(res));
+});
+
+function broadcastSettings(settings) {
+    const payload = `data: ${JSON.stringify(settings)}\n\n`;
+    for (const client of sseClients) {
+        client.write(payload);
+    }
+}
+
 // --- API: settings ---
 app.get('/settings', (_req, res) => {
     res.json(loadSettings());
@@ -123,6 +173,7 @@ app.get('/settings', (_req, res) => {
 app.post('/settings', (req, res) => {
     try {
         const saved = saveSettings(req.body);
+        broadcastSettings(saved);
         res.json(saved);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -231,6 +282,7 @@ async function refreshAccessToken() {
     accessToken = data.access_token;
     if (data.refresh_token) refreshToken = data.refresh_token;
     tokenExpiry = Date.now() + data.expires_in * 1000;
+    saveTokens();
 }
 
 async function ensureFreshToken() {
