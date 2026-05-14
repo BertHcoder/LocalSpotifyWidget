@@ -72,10 +72,11 @@ app.get('/callback', async (req, res) => {
         accessToken = tokens.access_token;
         refreshToken = tokens.refresh_token;
         tokenExpiry = Date.now() + tokens.expires_in * 1000;
+        console.log('Authenticated successfully!');
         res.send('<h2>Authenticated! You can close this tab.</h2><script>window.close()</script>');
     } catch (err) {
-        console.error('Token exchange failed:', err);
-        res.status(500).send('Token exchange failed');
+        console.error('Token exchange failed:', err.message ?? err);
+        res.status(500).send(`<h2>Token exchange failed</h2><pre>${err.message ?? err}</pre><p>Make sure your Spotify account is added to the app's user allowlist in the <a href="https://developer.spotify.com/dashboard">Developer Dashboard</a>.</p>`);
     }
 });
 

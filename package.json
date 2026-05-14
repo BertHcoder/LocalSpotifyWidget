@@ -3,12 +3,17 @@
   "version": "0.1.0-alpha.1",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "node build.js"
   },
   "license": "ISC",
   "description": "A minimal, fully local Spotify Now Playing widget for OBS Studio.",
   "dependencies": {
     "express": "^5.2.1",
     "open": "^11.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "@yao-pkg/pkg": "^6.0.0"
   }
 }
