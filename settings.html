@@ -175,12 +175,15 @@
 
       <div class="field">
         <label for="textColor">Text Color</label>
-        <div class="color-row">
-          <div class="field">
-            <input type="text" id="textColor" placeholder="auto (black on light, white on dark)" />
+        <div class="color-row" style="align-items: flex-start;">
+          <div class="field" style="position: relative;">
+            <div style="position: relative;">
+              <input type="text" id="textColor" placeholder="auto (black on light, white on dark)" style="padding-right: 32px;" />
+              <button type="button" id="clearTextColor" title="Reset to auto" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 4px; line-height: 1; display: none;">✕</button>
+            </div>
             <div class="hint">Leave empty for auto-contrast. Named color or 6-digit hex.</div>
           </div>
-          <input type="color" id="textColorPreview" class="color-preview" value="#ffffff" title="Pick a text color" />
+          <input type="color" id="textColorPreview" class="color-preview" value="#ffffff" title="Pick a text color" style="margin-top: 1px;" />
         </div>
       </div>
 
@@ -281,6 +284,7 @@
         // Update text color preview
         const tc = (s.textColor || '').replace(/^#/, '');
         textColorPreviewEl.value = /^[0-9a-f]{6}$/i.test(tc) ? `#${tc}` : '#ffffff';
+        $('#clearTextColor').style.display = s.textColor ? 'block' : 'none';
         updateObsUrl();
       } catch { /* defaults are fine */ }
     }
@@ -408,12 +412,19 @@
     });
     textColorEl.addEventListener('input', () => {
       const val = textColorEl.value.trim();
+      $('#clearTextColor').style.display = val ? 'block' : 'none';
       if (!val) { textColorPreviewEl.value = '#ffffff'; return; }
       const hex = val.replace(/^#/, '');
       if (/^[0-9a-f]{6}$/i.test(hex)) { textColorPreviewEl.value = `#${hex}`; }
     });
     textColorPreviewEl.addEventListener('input', () => {
       textColorEl.value = textColorPreviewEl.value;
+      $('#clearTextColor').style.display = 'block';
+    });
+    $('#clearTextColor').addEventListener('click', () => {
+      textColorEl.value = '';
+      textColorPreviewEl.value = '#ffffff';
+      $('#clearTextColor').style.display = 'none';
     });
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(obsUrlEl.value);

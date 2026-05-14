@@ -69,6 +69,7 @@ const DEFAULT_SETTINGS = {
     theme: '',
     colorMode: 'adaptive',
     fixedColor: '',
+    textColor: '',
     showProgress: true,
     showNext: true,
     showCode: true,
