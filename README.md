@@ -87,6 +87,8 @@ Paste your **Client ID** and click **Save & Log In** — authorize with Spotify 
 4. Uncheck **"Shutdown source when not visible"** so the widget keeps polling.
 5. Position it wherever you want on your scene.
 
+> **Tip:** If you change settings and they don't appear in OBS, right-click the browser source and click **"Refresh cache of current page"**.
+
 ### Themes
 
 Append `?theme=` to the browser source URL to switch layouts:
