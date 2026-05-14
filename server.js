@@ -101,6 +101,19 @@ function saveSettings(settings) {
 const app = express();
 app.use(express.json());
 
+// CORS: only allow requests from this server's own origin
+app.use((req, res, next) => {
+    const allowed = `http://127.0.0.1:${PORT}`;
+    const origin = req.headers.origin;
+    if (!origin || origin === allowed) {
+        res.setHeader('Access-Control-Allow-Origin', allowed);
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.status(204).end();
+    next();
+});
+
 // Block sensitive files from being served statically
 app.use((req, res, next) => {
     const blocked = ['/tokens.json', '/settings.json', '/.env'];
