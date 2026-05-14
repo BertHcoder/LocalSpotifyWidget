@@ -7,8 +7,14 @@ let adaptive = true;
 let showProgress = true;
 let showNext = true;
 let showCode = true;
+let showAlbum = false;
 let opacity = 100;
 let textColor = null;
+
+// ── Client-side progress interpolation ────────────────────────────────
+let localProgressMs = 0;
+let localDurationMs = 0;
+let isCurrentlyPlaying = false;
 
 const widget = document.getElementById('widget');
 const albumArt = document.getElementById('album-art');
@@ -20,6 +26,7 @@ const timeTotal = document.getElementById('time-total');
 const nextTrackEl = document.getElementById('next-track');
 const spotifyCode = document.getElementById('spotify-code');
 const showNameEl = document.getElementById('show-name');
+const albumNameEl = document.getElementById('album-name');
 const timeRow = document.getElementById('time-row');
 
 function resolveColor(input) {
@@ -102,6 +109,7 @@ function applySettings() {
   if (timeRow) timeRow.style.display = showProgress ? '' : 'none';
   if (nextTrackEl) nextTrackEl.style.display = showNext ? '' : 'none';
   if (spotifyCode) spotifyCode.style.display = showCode ? '' : 'none';
+  if (albumNameEl) albumNameEl.style.display = showAlbum ? '' : 'none';
 
   // Opacity (only reduce when transparency is enabled)
   widget.style.opacity = Math.max(0.1, Math.min(1, opacity / 100));
@@ -126,6 +134,7 @@ async function loadSettings() {
     showProgress = s.showProgress !== false;
     showNext = s.showNext !== false;
     showCode = s.showCode !== false;
+    showAlbum = s.showAlbum === true;
     opacity = s.opacity ?? 100;
     textColor = s.textColor || null;
   } catch { /* defaults are fine */ }
@@ -158,6 +167,7 @@ async function poll() {
     titleSpan.textContent = data.title;
     artistEl.textContent = isEpisode ? '' : data.artist;
     showNameEl.textContent = isEpisode ? data.show : '';
+    if (albumNameEl) albumNameEl.textContent = (!isEpisode && data.album) ? data.album : '';
 
     // Only update art when the track changes (avoid flicker)
     const trackId = `${data.title}|${data.artist}`;
@@ -175,13 +185,18 @@ async function poll() {
       applyMarquee();
     }
 
+    // Sync local progress state from server
+    localProgressMs = data.progressMs || 0;
+    localDurationMs = data.durationMs || 0;
+    isCurrentlyPlaying = data.playing;
+
     // Progress bar
-    const pct = data.durationMs ? (data.progressMs / data.durationMs) * 100 : 0;
+    const pct = localDurationMs ? (localProgressMs / localDurationMs) * 100 : 0;
     progressFill.style.width = `${pct}%`;
 
     // Time display
-    timeCurrent.textContent = formatMs(data.progressMs);
-    timeTotal.textContent = formatMs(data.durationMs);
+    timeCurrent.textContent = formatMs(localProgressMs);
+    timeTotal.textContent = formatMs(localDurationMs);
 
     // Next track
     if (data.nextTitle) {
@@ -257,6 +272,7 @@ function connectSettingsStream() {
       showProgress = s.showProgress !== false;
       showNext = s.showNext !== false;
       showCode = s.showCode !== false;
+      showAlbum = s.showAlbum === true;
       opacity = s.opacity ?? 100;
       textColor = s.textColor || null;
       applySettings();
@@ -266,6 +282,15 @@ function connectSettingsStream() {
     } catch { /* ignore malformed events */ }
   };
 }
+
+// ── Client-side progress interpolation between polls ──────────────────
+setInterval(() => {
+  if (!isCurrentlyPlaying || !localDurationMs) return;
+  localProgressMs = Math.min(localProgressMs + 1000, localDurationMs);
+  const pct = (localProgressMs / localDurationMs) * 100;
+  progressFill.style.width = `${pct}%`;
+  timeCurrent.textContent = formatMs(localProgressMs);
+}, 1000);
 
 // Kick off: load settings, connect SSE, then start polling
 loadSettings().then(() => {

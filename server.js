@@ -2,6 +2,8 @@ import express from 'express';
 import open from 'open';
 import crypto from 'crypto';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { execSync } from 'child_process';
+import { startTray } from './tray.js';
 
 // ── Load .env manually (no extra dependency) ──────────────────────────
 function loadEnv(path = '.env') {
@@ -73,6 +75,7 @@ const DEFAULT_SETTINGS = {
     showProgress: true,
     showNext: true,
     showCode: true,
+    showAlbum: false,
     opacity: 100,
 };
 
@@ -168,6 +171,51 @@ app.post('/logout', (_req, res) => {
     res.json({ ok: true });
 });
 
+// --- API: quit (graceful shutdown, used by tray icon) ---
+app.post('/quit', (_req, res) => {
+    res.json({ ok: true });
+    setTimeout(() => process.exit(0), 200);
+});
+
+// --- API: auto-start (Windows startup registry) ---
+const REG_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
+const REG_NAME = 'SpotifyWidget';
+
+app.get('/autostart', (_req, res) => {
+    if (process.platform !== 'win32') return res.json({ supported: false });
+    try {
+        const out = execSync(
+            `reg query "${REG_KEY}" /v ${REG_NAME}`,
+            { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
+        );
+        res.json({ supported: true, enabled: out.includes(REG_NAME) });
+    } catch {
+        res.json({ supported: true, enabled: false });
+    }
+});
+
+app.post('/autostart', (req, res) => {
+    if (process.platform !== 'win32') return res.json({ supported: false });
+    const { enabled } = req.body;
+    try {
+        if (enabled) {
+            const exe = process.execPath.replace(/\\/g, '\\\\');
+            execSync(
+                `reg add "${REG_KEY}" /v ${REG_NAME} /t REG_SZ /d "\\"${exe}\\"" /f`,
+                { stdio: ['pipe', 'pipe', 'pipe'] }
+            );
+        } else {
+            execSync(
+                `reg delete "${REG_KEY}" /v ${REG_NAME} /f`,
+                { stdio: ['pipe', 'pipe', 'pipe'] }
+            );
+        }
+        res.json({ ok: true, enabled: !!enabled });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- SSE: push settings changes to overlay clients ---
 const sseClients = new Set();
 
@@ -205,8 +253,17 @@ app.post('/settings', (req, res) => {
 });
 
 // --- API: current track data for the overlay ---
+let nowPlayingCache = null;
+let nowPlayingCacheTime = 0;
+const CACHE_TTL = 2500; // ms
+
 app.get('/now-playing', async (_req, res) => {
     if (!accessToken) return res.json({ playing: false });
+
+    // Return cached response if still fresh
+    if (nowPlayingCache && (Date.now() - nowPlayingCacheTime) < CACHE_TTL) {
+        return res.json(nowPlayingCache);
+    }
 
     try {
         await ensureFreshToken();
@@ -215,7 +272,9 @@ app.get('/now-playing', async (_req, res) => {
         });
 
         if (response.status === 204 || response.status === 202) {
-            return res.json({ playing: false });
+            nowPlayingCache = { playing: false };
+            nowPlayingCacheTime = Date.now();
+            return res.json(nowPlayingCache);
         }
         if (!response.ok) {
             console.error('Spotify API error', response.status);
@@ -223,7 +282,11 @@ app.get('/now-playing', async (_req, res) => {
         }
 
         const data = await response.json();
-        if (!data || !data.item) return res.json({ playing: false });
+        if (!data || !data.item) {
+            nowPlayingCache = { playing: false };
+            nowPlayingCacheTime = Date.now();
+            return res.json(nowPlayingCache);
+        }
 
         const item = data.item;
         const isEpisode = item.type === 'episode';
@@ -247,7 +310,7 @@ app.get('/now-playing', async (_req, res) => {
             }
         } catch { /* queue fetch is best-effort */ }
 
-        res.json({
+        const result = {
             playing: data.is_playing,
             type: isEpisode ? 'episode' : 'track',
             title: item.name,
@@ -262,7 +325,10 @@ app.get('/now-playing', async (_req, res) => {
             trackUri: item.uri ?? null,
             nextTitle,
             nextArtist,
-        });
+        };
+        nowPlayingCache = result;
+        nowPlayingCacheTime = Date.now();
+        res.json(result);
     } catch (err) {
         console.error('Error fetching now-playing:', err.message);
         res.json({ playing: false });
@@ -316,6 +382,8 @@ async function ensureFreshToken() {
 }
 
 // ── Start ─────────────────────────────────────────────────────────────
+const trayMode = process.pkg || process.argv.includes('--tray');
+
 app.listen(PORT, async () => {
     console.log(`\n  Spotify Widget running at http://127.0.0.1:${PORT}`);
     console.log(`  Settings:                 http://127.0.0.1:${PORT}/settings.html`);
@@ -327,11 +395,18 @@ app.listen(PORT, async () => {
             console.log('  Restored session from saved tokens — no login needed.');
         } catch {
             console.log('  Saved tokens expired — opening browser to log in.');
-            open(`http://127.0.0.1:${PORT}/settings.html`);
+            if (!trayMode) open(`http://127.0.0.1:${PORT}/settings.html`);
         }
     } else {
         console.log('  No saved session — opening browser to log in.');
-        open(`http://127.0.0.1:${PORT}/settings.html`);
+        if (!trayMode) open(`http://127.0.0.1:${PORT}/settings.html`);
     }
+
+    // Start system tray icon (packaged exe or --tray flag)
+    if (trayMode) {
+        startTray(PORT);
+        console.log('  System tray icon active — right-click to access menu.');
+    }
+
     console.log();
 });

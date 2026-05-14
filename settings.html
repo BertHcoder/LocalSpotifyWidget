@@ -212,6 +212,10 @@
         <label class="toggle"><input type="checkbox" id="showNext" checked /><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
+        <span>Show album name</span>
+        <label class="toggle"><input type="checkbox" id="showAlbum" /><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
         <div>
           <span>Show Spotify code</span>
           <div class="hint" style="margin-top: 2px;">A scannable barcode viewers can scan it with their phone to open the song in Spotify.</div>
@@ -232,6 +236,22 @@
       <div class="hint" style="margin-top: 6px;">💡 If changed settings are not showing in OBS, right-click the browser source and click <em>"Refresh cache of current page"</em>.</div>
     </div>
 
+    <!-- System -->
+    <div class="card" id="systemCard">
+      <h2><span class="icon">🖥</span> System</h2>
+      <div class="toggle-row" id="autostartRow" style="display: none;">
+        <div>
+          <span>Start with Windows</span>
+          <div class="hint" style="margin-top: 2px;">Automatically launch the widget when you log in.</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="autostart" /><span class="slider"></span></label>
+      </div>
+      <div style="margin-top: 12px;">
+        <button class="logout-btn" id="quitBtn" style="border-color: #888; color: #888; padding: 8px 16px; font-size: 13px;">Quit Widget Server</button>
+        <span class="hint" style="margin-left: 8px;">Stops the server and closes the tray icon.</span>
+      </div>
+    </div>
+
     <!-- Save -->
     <button class="save-btn" id="saveBtn">Save Settings</button>
   </div>
@@ -247,6 +267,7 @@
     const textColorPreviewEl = $('#textColorPreview');
     const showProgressEl = $('#showProgress');
     const showNextEl = $('#showNext');
+    const showAlbumEl = $('#showAlbum');
     const showCodeEl = $('#showCode');
     const enableTransparencyEl = $('#enableTransparency');
     const opacitySliderEl = $('#opacity-slider');
@@ -272,6 +293,7 @@
         textColorEl.value = s.textColor || '';
         showProgressEl.checked = s.showProgress !== false;
         showNextEl.checked = s.showNext !== false;
+        showAlbumEl.checked = s.showAlbum === true;
         showCodeEl.checked = s.showCode !== false;
         const opVal = s.opacity ?? 100;
         const transparencyOn = opVal < 100;
@@ -375,6 +397,7 @@
         textColor: textColorEl.value.trim(),
         showProgress: showProgressEl.checked,
         showNext: showNextEl.checked,
+        showAlbum: showAlbumEl.checked,
         showCode: showCodeEl.checked,
         opacity: enableTransparencyEl.checked ? Number(opacityEl.value) : 100,
       };
@@ -447,9 +470,44 @@
       window.location.href = '/login';
     });
 
+    // ── System: autostart + quit ───────────────────────────
+    const autostartEl = $('#autostart');
+    const autostartRow = $('#autostartRow');
+    const quitBtn = $('#quitBtn');
+
+    async function checkAutostart() {
+      try {
+        const res = await fetch('/autostart');
+        const data = await res.json();
+        if (data.supported) {
+          autostartRow.style.display = '';
+          autostartEl.checked = data.enabled;
+        }
+      } catch { /* hide row if unsupported */ }
+    }
+
+    autostartEl.addEventListener('change', async () => {
+      try {
+        await fetch('/autostart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: autostartEl.checked }),
+        });
+      } catch {
+        autostartEl.checked = !autostartEl.checked;
+      }
+    });
+
+    quitBtn.addEventListener('click', async () => {
+      if (!confirm('This will stop the widget server. OBS will no longer show the overlay until you restart it. Continue?')) return;
+      try { await fetch('/quit', { method: 'POST' }); } catch { /* server is gone */ }
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#888;font-family:sans-serif;"><p>Server stopped. Close this tab.</p></div>';
+    });
+
     // ── Init ─────────────────────────────────────────────────
     loadSettings();
     checkAuth();
+    checkAutostart();
     updateObsUrl();
     // Show error if redirected back for missing client ID
     if (new URLSearchParams(location.search).get('error') === 'missing_client_id') {

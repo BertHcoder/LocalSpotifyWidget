@@ -92,8 +92,20 @@ body {
   background: #1db954;              /* Spotify green */
   border-radius: 2px;
   width: 0%;
-  transition: width 1s linear;
+  transition: width 0.3s linear;
 }
+
+/* ── Album name ────────────────────────────────────────────────────── */
+#album-name {
+  font-size: 11px;
+  color: var(--muted-color, #888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+}
+
+#album-name:empty { display: none; }
 
 /* ── Spotify Code ──────────────────────────────────────────────────── */
 #spotify-code {
