@@ -21,8 +21,9 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 - **Album art** — full-res cover pulled straight from the Spotify API
 - **Track title with auto-scroll** — long titles get a smooth marquee animation instead of ugly truncation
 - **Artist name** — all featured artists, comma-separated
-- **Live progress bar** — real-time playback position with elapsed/total timestamps
+- **Smooth progress bar** — interpolates between polls for a buttery-smooth real-time feel
 - **Next track preview** — shows what's coming up next in your queue
+- **Album name** — optional display of the current album (toggle in settings)
 - **Podcast & episode support** — detects episodes automatically, shows the podcast/show name in green
 - **Color-adaptive background** — widget background tints to match the album art (disable with `?adaptive=false`)
 - **Custom text color** — override text color manually or let auto-contrast pick black/white based on background
@@ -31,6 +32,9 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 - **Auto-hide** — widget slides out when playback is paused or stopped
 - **Transparent background** — composites cleanly over any OBS scene
 - **Auto-refresh tokens** — handles OAuth token renewal silently, no re-auth needed
+- **System tray** — the `.exe` build runs in the tray with settings access and a quit option
+- **Start with Windows** — one-click toggle to auto-launch on login (settings page or tray menu)
+- **Response caching** — multiple browser sources share a single API call (no rate-limit worries)
 
 ## What It Doesn't Do
 
@@ -147,14 +151,15 @@ Lower values make the widget semi-transparent so your scene shows through.
 |------|---------|
 | `server.js` | Express server — handles Spotify OAuth (PKCE), proxies the API, serves the overlay and settings |
 | `overlay.html` | The page OBS loads as a browser source |
-| `settings.html` | In-browser settings page (theme, colors, toggles) — opens on first run |
+| `settings.html` | In-browser settings page (theme, colors, toggles, system controls) — opens on first run |
 | `settings.json` | Persisted user preferences (auto-generated) |
 | `style.css` | All styling — dark theme, Spotify green accent, smooth animations |
-| `widget.js` | Client-side polling logic, marquee, progress bar updates |
+| `widget.js` | Client-side polling logic, marquee, progress interpolation |
 | `colors.js` | Named color map shared between widget and settings |
+| `tray.js` | Windows system tray icon (context menu, start-with-Windows toggle) |
 | `build.js` | Bundles the project into a standalone `.exe` for releases |
 
-The overlay polls the local server every **3 seconds**. The server calls the Spotify API, returns a slim JSON payload, and the widget updates in place. Tokens refresh automatically before they expire.
+The overlay polls the local server every **3 seconds**. The server calls the Spotify API (with a 2.5 s response cache), returns a slim JSON payload, and the widget updates in place. Between polls, the progress bar and timestamp interpolate client-side for smooth real-time display. Tokens refresh automatically before they expire.
 
 ---
 
@@ -168,10 +173,11 @@ The overlay polls the local server every **3 seconds**. The server calls the Spo
 
 ## Tech Stack
 
-- **Node.js** + **Express 5** — local server (~340 lines)
+- **Node.js** + **Express 5** — local server (~380 lines)
 - **Spotify Web API** — official REST API with OAuth 2.0 PKCE
 - **Vanilla HTML/CSS/JS** — no React, no Vue, no build step, no bundler
 - **2 dependencies** — `express` and `open` (for the initial auth browser tab)
+- **System tray** — native Windows tray via PowerShell/.NET (zero extra deps)
 
 ---
 
