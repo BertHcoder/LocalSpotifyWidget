@@ -17,7 +17,7 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 
 ## Features
 
-- **Easy setup** — create a free Spotify app, paste your Client ID, and you're running
+- **Guided setup** — the settings page walks you through connecting Spotify step by step, with copy buttons and plain-language error messages
 - **Album art** — full-res cover pulled straight from the Spotify API
 - **Track title with auto-scroll** — long titles get a smooth marquee animation instead of ugly truncation
 - **Artist name** — all featured artists, comma-separated
@@ -45,55 +45,81 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 
 ---
 
-## Download
+## Getting Started (Windows, nothing to install)
 
-**[⬇ Download the latest release](https://github.com/BertHcoder/LocalSpotifyWidget/releases/latest)**
+### What you need
 
-Or clone the repo:
+- **Windows 10 or 11** (on macOS/Linux, [run it from source](#run-from-source))
+- **OBS Studio**
+- **Spotify Premium** — Spotify requires a small (free) developer app to read what's playing, and [since February 2026](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide) the account that owns that app must have Premium.
 
-```bash
-git clone https://github.com/BertHcoder/LocalSpotifyWidget.git
-```
+### 1. Download
+
+1. **[⬇ Download the latest release](https://github.com/BertHcoder/LocalSpotifyWidget/releases/latest)** — grab the `SpotifyWidget-…-win-x64.zip` file.
+2. Extract it to a folder you'll keep, e.g. `Documents\SpotifyWidget`.  
+   Your settings and Spotify login are saved in that folder, so don't run the widget from inside the zip.
+
+### 2. Start it
+
+Double-click **`SpotifyWidget.exe`**.
+
+> Windows may show **"Windows protected your PC"** because the app isn't code-signed. Click **More info → Run anyway**.  
+> The release is built by [GitHub Actions](.github/workflows/release.yml) straight from this repo's source, or you can [build it yourself](#run-from-source).
+
+The settings page opens in your browser and a green dot appears in the system tray, near the clock.
+
+### 3. Connect Spotify (one time, about 2 minutes)
+
+The settings page walks you through this, with copy buttons. For reference:
+
+1. Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and log in with your Spotify account.
+2. Click **Create app**. Any name and description will do (e.g. "My OBS Widget").
+3. Under **Redirect URI**, add exactly `http://127.0.0.1:4202/callback` and click **Add**.
+4. Under "Which API/SDKs are you planning to use?", tick **Web API**. Accept the terms and **Save**.
+5. Copy the **Client ID** from your new app's page (you don't need the Client secret).
+6. Paste it into the settings page and click **Save & Log In with Spotify**, then **Agree** on Spotify's page.
+
+You land back on the settings page with a green "Connected" status. Your login is remembered and refreshed automatically.
+
+### 4. Add it to OBS
+
+1. In OBS, click **+** under **Sources** → **Browser** → **OK**.
+2. Set the URL to `http://127.0.0.1:4202/overlay.html` (the settings page has a copy button).
+3. Set width to **400** and height to **120**, click **OK**, and drag it where you want it.
+
+Play a song in Spotify and it shows up. That's it.
+
+> **Tip:** If you change settings and they don't appear in OBS, right-click the browser source and click **"Refresh cache of current page"**.
+
+### Everyday use
+
+- **Settings:** double-click the green tray icon. Starting `SpotifyWidget.exe` again while it's already running also just opens the settings.
+- **Start with Windows:** right-click the tray icon, or use the toggle on the settings page.
+- **Quit:** right-click the tray icon → **Quit**.
+- **Update:** quit the widget, then extract the new release over the old folder. Your settings and login are kept.
+- **Moving the folder:** turn off "Start with Windows" first, move the folder, then turn it back on.
 
 ---
 
-## Quick Start
+## Run from Source
 
-### Prerequisites
-
-- **Node.js** 18+ — [download here](https://nodejs.org)
-- A **Spotify account** (free or Premium)
-- A **Spotify Developer App** (free, takes 30 seconds — see below)
-
-### 1. Create a Spotify App
-
-1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
-2. Click **Create App**.
-3. Fill in any name/description (e.g. "My OBS Widget").
-4. Set the **Redirect URI** to: `http://127.0.0.1:4202/callback`
-5. Check **Web API** under "Which APIs are you planning to use?"
-6. Save. Copy your **Client ID** (you'll paste it into the widget).
-
-### 2. Install & Run
+For macOS, Linux, or if you'd rather not run a downloaded `.exe`. Needs **Node.js 18+** ([download](https://nodejs.org)).
 
 ```bash
+git clone https://github.com/BertHcoder/LocalSpotifyWidget.git
 cd LocalSpotifyWidget
 npm install
 npm start
 ```
 
-Your browser opens the settings page automatically.  
-Paste your **Client ID** and click **Save & Log In** — authorize with Spotify and you're done.
+The settings page opens in your browser; follow the same steps as above. Keep the terminal open while streaming.  
+The tray icon and "Start with Windows" are only available in the `.exe`. To build it yourself on Windows: `npm run build` (output in `dist/`).
 
-### 3. Add to OBS
+---
 
-1. In OBS, add a **Browser Source**.
-2. Set the URL to `http://127.0.0.1:4202/overlay.html`.
-3. Set width to **400** and height to **120** (adjust to taste).
-4. Uncheck **"Shutdown source when not visible"** so the widget keeps polling.
-5. Position it wherever you want on your scene.
+## Customizing the Widget
 
-> **Tip:** If you change settings and they don't appear in OBS, right-click the browser source and click **"Refresh cache of current page"**.
+Most options (theme, colors, transparency, which elements to show) are on the settings page and apply live in OBS. The URL options below are handy if you want different looks in different scenes.
 
 ### Themes
 
@@ -138,6 +164,31 @@ Lower values make the widget semi-transparent so your scene shows through.
 
 ---
 
+## Troubleshooting
+
+**Spotify says "INVALID_CLIENT: Invalid redirect URI"**  
+The Redirect URI in your Spotify app must be exactly `http://127.0.0.1:4202/callback`: `127.0.0.1` (not `localhost`), `http` (not `https`), no trailing slash. Fix it in the dashboard (your app → Settings → Edit), save, and log in again.
+
+**Spotify says "INVALID_CLIENT: Invalid client", or the settings page says "Failed to get client"**  
+The Client ID is wrong. Copy it again from your app's page in the dashboard. If you're connected, click **Log out** first to get the Client ID field back.
+
+**The settings page says "Spotify refused access (403)"**  
+The account that owns your developer app needs an active Premium subscription. If you log in with a different account than the owner, add it under **User Management** in the dashboard (new apps allow up to 5 users).
+
+**Connected, but the widget stays empty**  
+The widget only shows while something is actually playing and hides when you pause. Start a song: the preview on the settings page should show it within a few seconds. If the preview works but OBS doesn't, check the browser source URL and use **"Refresh cache of current page"**.
+
+**I can't find the widget after starting it**  
+It runs in the system tray (the green dot near the clock; click **^** to see hidden icons). Double-click it, or start `SpotifyWidget.exe` again, to open the settings.
+
+**"Port 4202 is already in use by another program"**  
+Another program uses the widget's port. Create a file named `.env` next to `SpotifyWidget.exe` (or in the project folder when running from source) containing `PORT=4203`. In Notepad, pick **Save as type: All files** so it isn't saved as `.env.txt`. Then change the Redirect URI in your Spotify app to `http://127.0.0.1:4203/callback` and use port 4203 in the OBS URL too.
+
+**The settings page asks me to log in again**  
+Spotify no longer accepts the saved login, for example because you removed the app's access in your Spotify account or changed the Client ID. Click **Save & Log In with Spotify** to reconnect.
+
+---
+
 ## How It Works
 
 ```
@@ -151,7 +202,7 @@ Lower values make the widget semi-transparent so your scene shows through.
 |------|---------|
 | `server.js` | Express server — handles Spotify OAuth (PKCE), proxies the API, serves the overlay and settings |
 | `overlay.html` | The page OBS loads as a browser source |
-| `settings.html` | In-browser settings page (theme, colors, toggles, system controls) — opens on first run |
+| `settings.html` | In-browser settings page: guided Spotify setup, theme, colors, toggles, system controls. Opens on first run |
 | `settings.json` | Persisted user preferences (auto-generated) |
 | `style.css` | All styling — dark theme, Spotify green accent, smooth animations |
 | `widget.js` | Client-side polling logic, marquee, progress interpolation |
@@ -163,17 +214,17 @@ The overlay polls the local server every **3 seconds**. The server calls the Spo
 
 ---
 
-## Customization
+## Advanced Tweaks
 
 **Change poll speed** — edit `POLL_INTERVAL` in `widget.js` (default: 3000 ms).  
-**Change port** — set `PORT=5000` in a `.env` file in the project root.  
+**Change port** — set `PORT=5000` in a `.env` file next to the `.exe` (or in the project root), and update the Redirect URI in your Spotify app to match.  
 **Change styling** — edit `style.css` directly. The widget is 380px wide by default with a semi-transparent dark background and rounded corners.
 
 ---
 
 ## Tech Stack
 
-- **Node.js** + **Express 5** — local server (~380 lines)
+- **Node.js** + **Express 5** — local server (~500 lines)
 - **Spotify Web API** — official REST API with OAuth 2.0 PKCE
 - **Vanilla HTML/CSS/JS** — no React, no Vue, no build step, no bundler
 - **2 dependencies** — `express` and `open` (for the initial auth browser tab)

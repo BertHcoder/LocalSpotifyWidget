@@ -105,6 +105,44 @@
     .logout-btn:hover { background: #e74c3c; color: #fff; }
 
     .hidden { display: none !important; }
+
+    /* ── Notices (errors, success, API problems) ─────────── */
+    .notice { border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px; border: 1px solid; }
+    .notice.error { background: #2a1515; border-color: #e74c3c; }
+    .notice.success { background: #13291c; border-color: var(--green); }
+    .notice p { color: var(--muted); font-size: 13px; margin-top: 4px; line-height: 1.5; }
+    .notice a { color: var(--green); }
+    .notice-detail { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px !important; word-break: break-word; }
+
+    /* ── Step-by-step guides ──────────────────────────────── */
+    .card-intro { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+    .steps { list-style: none; counter-reset: step; }
+    .steps > li { counter-increment: step; position: relative; padding-left: 36px; margin-bottom: 18px; font-size: 14px; line-height: 1.5; }
+    .steps > li:last-child { margin-bottom: 0; }
+    .steps > li::before {
+      content: counter(step); position: absolute; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%;
+      background: var(--green); color: #000; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center;
+    }
+    .steps p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .steps .sublist { color: var(--muted); font-size: 13px; margin: 6px 0 6px 18px; }
+    .steps .sublist li { margin-bottom: 6px; }
+    .steps .url-box, .steps input[type="text"], .steps .save-btn { margin-top: 8px; }
+    .steps em { color: var(--text); font-style: normal; font-weight: 600; }
+    .link-btn {
+      display: inline-block; margin-top: 8px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--green);
+      color: var(--green); font-size: 13px; font-weight: 600; text-decoration: none;
+    }
+    .link-btn:hover { background: var(--green); color: #000; }
+    .field-error { color: #e74c3c; font-size: 12px; margin-top: 6px; }
+    input[type="text"].invalid, input[type="text"].invalid:focus { border-color: #e74c3c; }
+    code { color: var(--green); font-family: 'Consolas', 'Courier New', monospace; }
+
+    /* ── Preview placeholder ─────────────────────────────── */
+    .preview-frame { position: relative; }
+    .preview-empty {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+      padding: 20px; background: #000; border-radius: 12px; color: var(--muted); font-size: 13px; line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -119,18 +157,61 @@
       <button id="logoutBtn" class="logout-btn hidden">Log out</button>
     </div>
 
+    <!-- Login result (filled from ?error= / ?connected= after a login attempt) -->
+    <div id="notice" class="notice hidden" role="alert">
+      <strong id="noticeTitle"></strong>
+      <p id="noticeText"></p>
+      <p id="noticeDetail" class="notice-detail hidden"></p>
+    </div>
+
+    <!-- Problems reported by the Spotify API while logged in -->
+    <div id="apiWarning" class="notice error hidden" role="alert">
+      <strong id="apiWarningTitle"></strong>
+      <p id="apiWarningText"></p>
+      <p id="apiWarningDetail" class="notice-detail hidden"></p>
+    </div>
+
     <!-- Spotify App Setup -->
-    <div class="card" id="clientIdCard">
-      <h2><span class="icon">🔑</span> Spotify App</h2>
-      <div class="field">
-        <label for="clientId">Client ID</label>
-        <input type="text" id="clientId" placeholder="Paste your Spotify Client ID here" spellcheck="false" />
-        <div class="hint" style="margin-top: 6px;">
-          Create a free app at <a href="https://developer.spotify.com/dashboard" target="_blank" style="color: var(--green);">developer.spotify.com/dashboard</a>.<br>
-          Set the Redirect URI to <code style="color: var(--green);">http://127.0.0.1:4202/callback</code>
-        </div>
-      </div>
-      <button class="save-btn" id="saveClientIdBtn" style="margin-top: 12px;">Save &amp; Log In</button>
+    <div class="card hidden" id="clientIdCard">
+      <h2><span class="icon">🔑</span> Connect to Spotify</h2>
+      <p class="card-intro">
+        One-time setup, takes about two minutes. Spotify only lets tools like this one in through a small
+        developer app that you create yourself. It's free to create, but since February 2026 Spotify requires the
+        account that owns it to have <strong>Spotify Premium</strong>.
+      </p>
+      <ol class="steps">
+        <li>
+          <strong>Open the Spotify Developer Dashboard</strong>
+          <p>Log in with the Spotify account you play music on, and accept the developer terms if asked.</p>
+          <a class="link-btn" href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">Open the dashboard ↗</a>
+        </li>
+        <li>
+          <strong>Click <em>Create app</em> and fill in the form</strong>
+          <ul class="sublist">
+            <li>App name and description: anything you like, e.g. <em>My OBS Widget</em></li>
+            <li>
+              Redirect URI: copy this exactly, paste it and click <em>Add</em>
+              <div class="url-box">
+                <input type="text" id="redirectUri" value="http://127.0.0.1:4202/callback" readonly />
+                <button type="button" class="copy-btn" data-copy="redirectUri">Copy</button>
+              </div>
+            </li>
+            <li>Which API/SDKs are you planning to use: tick <em>Web API</em></li>
+          </ul>
+          <p>Accept the terms and click <em>Save</em>.</p>
+        </li>
+        <li>
+          <strong>Copy the Client ID</strong>
+          <p>It's shown on your new app's page. You only need the Client ID, not the Client secret.</p>
+          <input type="text" id="clientId" placeholder="Paste your Client ID here" spellcheck="false" autocomplete="off" aria-label="Spotify Client ID" />
+          <div id="clientIdError" class="field-error hidden"></div>
+        </li>
+        <li>
+          <strong>Log in with Spotify</strong>
+          <p>Spotify asks you to allow access. Click <em>Agree</em> and you'll come straight back here.</p>
+          <button class="save-btn" id="saveClientIdBtn">Save &amp; Log In with Spotify</button>
+        </li>
+      </ol>
     </div>
 
     <!-- Preview -->
@@ -138,6 +219,7 @@
       <h2><span class="icon">👁</span> Preview</h2>
       <div class="preview-frame">
         <iframe id="preview" src="overlay.html"></iframe>
+        <div id="previewEmpty" class="preview-empty">Checking what's playing…</div>
       </div>
     </div>
 
@@ -225,14 +307,26 @@
     </div>
 
     <!-- OBS URL -->
-    <div class="card">
-      <h2><span class="icon">📋</span> OBS Browser Source URL</h2>
-      <div class="url-box">
-        <input type="text" id="obsUrl" readonly />
-        <button class="copy-btn" id="copyBtn">Copy</button>
-      </div>
-      <div class="hint" style="margin-top: 8px;">Add a Browser Source in OBS and paste this URL. Width: 400, Height: 120.</div>
-      <div class="hint" style="margin-top: 6px;">💡 <strong>Tip:</strong> In the OBS Browser Source properties, enable <em>"Refresh browser when scene becomes active"</em> so the widget picks up new settings automatically without needing to clear the cache.</div>
+    <div class="card" id="obsCard">
+      <h2><span class="icon">📋</span> Add the widget to OBS</h2>
+      <ol class="steps">
+        <li>
+          <strong>Copy the widget URL</strong>
+          <div class="url-box">
+            <input type="text" id="obsUrl" readonly />
+            <button type="button" class="copy-btn" data-copy="obsUrl">Copy</button>
+          </div>
+        </li>
+        <li>
+          <strong>Add a Browser source in OBS</strong>
+          <p>Click <em>+</em> under <em>Sources</em>, choose <em>Browser</em>, give it a name and click <em>OK</em>.</p>
+        </li>
+        <li>
+          <strong>Paste the URL and set the size</strong>
+          <p>Paste it in the <em>URL</em> field, set <em>Width</em> to 400 and <em>Height</em> to 120, then click <em>OK</em>. Drag it wherever you like in your scene.</p>
+        </li>
+      </ol>
+      <div class="hint" style="margin-top: 14px;">💡 <strong>Tip:</strong> In the OBS Browser Source properties, enable <em>"Refresh browser when scene becomes active"</em> so the widget picks up new settings automatically without needing to clear the cache.</div>
       <div class="hint" style="margin-top: 6px;">💡 If changed settings are not showing in OBS, right-click the browser source and click <em>"Refresh cache of current page"</em>.</div>
     </div>
 
@@ -274,7 +368,6 @@
     const opacityEl = $('#opacity');
     const opacityValueEl = $('#opacityValue');
     const obsUrlEl = $('#obsUrl');
-    const copyBtn = $('#copyBtn');
     const saveBtn = $('#saveBtn');
     const preview = $('#preview');
     const clientIdEl = $('#clientId');
@@ -329,6 +422,7 @@
         const logoutBtn = $('#logoutBtn');
         const authRes = await fetch('/auth-status');
         const auth = await authRes.json();
+        if (auth.redirectUri) $('#redirectUri').value = auth.redirectUri;
         if (auth.authenticated) {
           dot.className = 'status-dot ok';
           const expiry = auth.expiresIn
@@ -337,20 +431,88 @@
           text.innerHTML = `Connected to Spotify${expiry}`;
           logoutBtn.classList.remove('hidden');
           clientIdCard.classList.add('hidden');
+          showApiWarning(auth.apiError);
         } else {
           dot.className = 'status-dot no';
-          text.innerHTML = clientIdEl.value.trim()
-            ? 'Not authenticated — <a href="/login">Log in to Spotify</a>'
-            : 'Not authenticated — enter your Client ID below';
+          text.innerHTML = auth.hasClientId
+            ? 'Not connected — <a href="/login">Log in to Spotify</a>'
+            : 'Not connected yet — follow the steps below to connect Spotify';
           logoutBtn.classList.add('hidden');
           clientIdCard.classList.remove('hidden');
+          showApiWarning(null);
         }
+        isAuthenticated = auth.authenticated;
       } catch {
         $('#status-dot').className = 'status-dot no';
-        $('#status-text').textContent = 'Cannot reach server';
+        $('#status-text').textContent = 'Cannot reach the widget server — is it still running?';
         $('#logoutBtn').classList.add('hidden');
-        clientIdCard.classList.remove('hidden');
+        isAuthenticated = false;
       }
+    }
+
+    // ── Plain-language explanations for login and API problems ─
+    const LOGIN_ERRORS = {
+      missing_client_id: ['Enter your Client ID first', 'Follow the steps below to create a Spotify app and paste its Client ID.'],
+      access_denied: ['Login cancelled', 'Access wasn\'t allowed on the Spotify page. Click "Save & Log In with Spotify" to try again.'],
+      login_expired: ['Login timed out', 'The login didn\'t finish, for example because the widget restarted in between. Please log in again.'],
+      token_exchange: ['Spotify didn\'t accept the login', 'Check that the Client ID is correct and that the Redirect URI in your Spotify app matches the one below exactly. The account you log in with must own the app (with Premium), or be added under User Management in the dashboard.'],
+    };
+
+    function showNotice(type, title, message, detail) {
+      const box = $('#notice');
+      box.className = `notice ${type}`;
+      $('#noticeTitle').textContent = title;
+      $('#noticeText').innerHTML = message;
+      $('#noticeDetail').textContent = detail ? `Spotify said: ${detail}` : '';
+      $('#noticeDetail').classList.toggle('hidden', !detail);
+    }
+
+    function showLoginResult() {
+      const params = new URLSearchParams(location.search);
+      const error = params.get('error');
+      if (params.get('connected')) {
+        showNotice('success', 'Connected to Spotify 🎉', 'Last step: add the widget to OBS. <a href="#obsCard">Show me how</a>');
+      } else if (error) {
+        const known = Object.hasOwn(LOGIN_ERRORS, error);
+        const [title, message] = known ? LOGIN_ERRORS[error] : ['Spotify reported a problem', 'Please try logging in again.'];
+        showNotice('error', title, message, params.get('detail') || (known ? '' : error));
+        if (error === 'missing_client_id') clientIdEl.focus();
+      }
+      // Drop the query so a reload doesn't show the message again
+      if (error || params.get('connected')) history.replaceState(null, '', location.pathname);
+    }
+
+    function showApiWarning(apiError) {
+      const box = $('#apiWarning');
+      if (!apiError) { box.classList.add('hidden'); return; }
+      const hints = {
+        401: ['Spotify login is no longer valid', 'Click "Log out" above and log in again.'],
+        403: ['Spotify refused access (403)', 'Usually the account that owns your Spotify developer app has no active Premium subscription, or you logged in with an account that isn\'t the owner and isn\'t added under User Management in the dashboard.'],
+        429: ['Spotify is rate-limiting requests', 'The widget will recover by itself in a moment.'],
+      };
+      const [title, message] = hints[apiError.status]
+        ?? (apiError.status
+          ? [`Spotify returned an error (${apiError.status})`, 'The widget keeps retrying automatically.']
+          : ['Can\'t reach Spotify', 'Check your internet connection. The widget keeps retrying automatically.']);
+      $('#apiWarningTitle').textContent = title;
+      $('#apiWarningText').textContent = message;
+      $('#apiWarningDetail').textContent = apiError.message ? `Spotify said: ${apiError.message}` : '';
+      $('#apiWarningDetail').classList.toggle('hidden', !apiError.message);
+      box.classList.remove('hidden');
+    }
+
+    // ── Preview: explain why it's empty instead of showing a black box ─
+    let isAuthenticated = false;
+    async function updatePreviewState() {
+      const empty = $('#previewEmpty');
+      try {
+        const data = await (await fetch('/now-playing')).json();
+        if (data.playing) { empty.classList.add('hidden'); return; }
+      } catch { /* show the placeholder */ }
+      empty.textContent = isAuthenticated
+        ? 'Nothing is playing right now. Start a song in Spotify and the widget appears here and in OBS. It hides itself while playback is paused.'
+        : 'Connect Spotify to see a live preview here.';
+      empty.classList.remove('hidden');
     }
 
     // ── UI updates ───────────────────────────────────────────
@@ -449,24 +611,56 @@
       textColorPreviewEl.value = '#ffffff';
       $('#clearTextColor').style.display = 'none';
     });
-    copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(obsUrlEl.value);
-      copyBtn.textContent = 'Copied!';
-      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const input = document.getElementById(btn.dataset.copy);
+        try {
+          await navigator.clipboard.writeText(input.value);
+        } catch {
+          input.select();
+          document.execCommand('copy');
+        }
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      });
     });
     saveBtn.addEventListener('click', save);
     $('#logoutBtn').addEventListener('click', async () => {
       await fetch('/logout', { method: 'POST' });
       checkAuth();
     });
+    function showClientIdError(message) {
+      const err = $('#clientIdError');
+      err.textContent = message;
+      err.classList.toggle('hidden', !message);
+      clientIdEl.classList.toggle('invalid', !!message);
+    }
+    clientIdEl.addEventListener('input', () => showClientIdError(''));
     saveClientIdBtn.addEventListener('click', async () => {
-      const id = clientIdEl.value.trim();
-      if (!id) { clientIdEl.focus(); return; }
-      await fetch('/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId: id }),
-      });
+      // Pasting often picks up spaces or line breaks
+      const id = clientIdEl.value.replace(/\s+/g, '');
+      clientIdEl.value = id;
+      if (!id) {
+        showClientIdError('Paste the Client ID from your Spotify app first.');
+        clientIdEl.focus();
+        return;
+      }
+      if (!/^[0-9a-f]{32}$/i.test(id)) {
+        showClientIdError('That doesn\'t look like a Client ID. It should be 32 letters and numbers, copied from your app\'s page in the Spotify dashboard.');
+        clientIdEl.focus();
+        return;
+      }
+      try {
+        const res = await fetch('/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientId: id }),
+        });
+        if (!res.ok) throw new Error();
+      } catch {
+        showClientIdError('Couldn\'t save the Client ID. Is the widget still running?');
+        return;
+      }
       window.location.href = '/login';
     });
 
@@ -506,16 +700,13 @@
 
     // ── Init ─────────────────────────────────────────────────
     loadSettings();
-    checkAuth();
+    showLoginResult();
+    checkAuth().then(updatePreviewState);
     checkAutostart();
     updateObsUrl();
-    // Show error if redirected back for missing client ID
-    if (new URLSearchParams(location.search).get('error') === 'missing_client_id') {
-      clientIdEl.focus();
-      clientIdEl.style.borderColor = '#e74c3c';
-    }
-    // Refresh auth status every 60s to keep expiry display current
-    setInterval(checkAuth, 60000);
+    // Keep the connection status, API warnings and token expiry current
+    setInterval(checkAuth, 10000);
+    setInterval(updatePreviewState, 3000);
   </script>
 </body>
 </html>

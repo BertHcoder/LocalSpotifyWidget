@@ -2,7 +2,7 @@ import express from 'express';
 import open from 'open';
 import crypto from 'crypto';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { startTray } from './tray.js';
 
 // ── Load .env manually (no extra dependency) ──────────────────────────
@@ -53,8 +53,18 @@ function saveTokens() {
 
 loadTokens();
 
+function clearTokens() {
+    accessToken = null;
+    refreshToken = null;
+    tokenExpiry = 0;
+    saveTokens();
+}
+
+// Last error returned by the Spotify API, shown on the settings page
+let lastApiError = null;
+
 // ── PKCE helpers ──────────────────────────────────────────────────────
-let codeVerifier = null;
+let pendingLogin = null; // { state, codeVerifier } for the login in progress
 
 function generateCodeVerifier() {
     return crypto.randomBytes(64).toString('base64url');
@@ -89,9 +99,11 @@ function loadSettings() {
 }
 
 function saveSettings(settings) {
+    // Merge with what's saved, so a partial update (e.g. only clientId) keeps the rest
+    const current = loadSettings();
     const safe = {};
     for (const key of Object.keys(DEFAULT_SETTINGS)) {
-        safe[key] = settings[key] ?? DEFAULT_SETTINGS[key];
+        safe[key] = settings[key] ?? current[key];
     }
     writeFileSync(SETTINGS_FILE, JSON.stringify(safe, null, 2));
     return safe;
@@ -132,7 +144,8 @@ app.get('/login', (_req, res) => {
         return res.redirect('/settings.html?error=missing_client_id');
     }
     const state = crypto.randomBytes(16).toString('hex');
-    codeVerifier = generateCodeVerifier();
+    const codeVerifier = generateCodeVerifier();
+    pendingLogin = { state, codeVerifier };
     const codeChallenge = generateCodeChallenge(codeVerifier);
     const params = new URLSearchParams({
         response_type: 'code',
@@ -147,21 +160,32 @@ app.get('/login', (_req, res) => {
 });
 
 // --- Auth: Spotify redirects here ---
+// Problems are sent back to the settings page, which explains them in plain language.
+function authError(res, code, detail) {
+    const params = new URLSearchParams({ error: code });
+    if (detail) params.set('detail', detail);
+    res.redirect(`/settings.html?${params}`);
+}
+
 app.get('/callback', async (req, res) => {
-    const { code, error } = req.query;
-    if (error) return res.send(`Auth error: ${error}`);
+    const { code, error, state } = req.query;
+    const login = pendingLogin;
+    pendingLogin = null;
+    if (error) return authError(res, String(error));
+    if (!login || state !== login.state || !code) return authError(res, 'login_expired');
 
     try {
-        const tokens = await exchangeCode(code);
+        const tokens = await exchangeCode(String(code), login.codeVerifier);
         accessToken = tokens.access_token;
         refreshToken = tokens.refresh_token;
         tokenExpiry = Date.now() + tokens.expires_in * 1000;
+        lastApiError = null;
         saveTokens();
         console.log('Authenticated successfully!');
-        res.redirect('/settings.html');
+        res.redirect('/settings.html?connected=1');
     } catch (err) {
         console.error('Token exchange failed:', err.message ?? err);
-        res.status(500).send(`<h2>Token exchange failed</h2><pre>${err.message ?? err}</pre><p>Make sure your Spotify account is added to the app's user allowlist in the <a href="https://developer.spotify.com/dashboard">Developer Dashboard</a>.</p>`);
+        authError(res, 'token_exchange', err.message ?? String(err));
     }
 });
 
@@ -170,6 +194,8 @@ app.get('/auth-status', (_req, res) => {
     res.json({
         authenticated: !!accessToken,
         hasClientId: !!getClientId(),
+        redirectUri: REDIRECT_URI,
+        apiError: lastApiError,
         tokenExpiry: tokenExpiry || null,
         expiresIn: tokenExpiry ? Math.max(0, tokenExpiry - Date.now()) : null,
     });
@@ -177,10 +203,8 @@ app.get('/auth-status', (_req, res) => {
 
 // --- API: logout (clear tokens) ---
 app.post('/logout', (_req, res) => {
-    accessToken = null;
-    refreshToken = null;
-    tokenExpiry = 0;
-    saveTokens();
+    clearTokens();
+    lastApiError = null;
     res.json({ ok: true });
 });
 
@@ -191,14 +215,16 @@ app.post('/quit', (_req, res) => {
 });
 
 // --- API: auto-start (Windows startup registry) ---
+// Only offered for the packaged .exe; from source there is no single file to launch.
 const REG_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 const REG_NAME = 'SpotifyWidget';
+const AUTOSTART_SUPPORTED = process.platform === 'win32' && !!process.pkg;
 
 app.get('/autostart', (_req, res) => {
-    if (process.platform !== 'win32') return res.json({ supported: false });
+    if (!AUTOSTART_SUPPORTED) return res.json({ supported: false });
     try {
-        const out = execSync(
-            `reg query "${REG_KEY}" /v ${REG_NAME}`,
+        const out = execFileSync(
+            'reg', ['query', REG_KEY, '/v', REG_NAME],
             { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
         );
         res.json({ supported: true, enabled: out.includes(REG_NAME) });
@@ -208,18 +234,17 @@ app.get('/autostart', (_req, res) => {
 });
 
 app.post('/autostart', (req, res) => {
-    if (process.platform !== 'win32') return res.json({ supported: false });
+    if (!AUTOSTART_SUPPORTED) return res.json({ supported: false });
     const { enabled } = req.body;
     try {
         if (enabled) {
-            const exe = process.execPath.replace(/\\/g, '\\\\');
-            execSync(
-                `reg add "${REG_KEY}" /v ${REG_NAME} /t REG_SZ /d "\\"${exe}\\"" /f`,
+            execFileSync(
+                'reg', ['add', REG_KEY, '/v', REG_NAME, '/t', 'REG_SZ', '/d', `"${process.execPath}" --autostart`, '/f'],
                 { stdio: ['pipe', 'pipe', 'pipe'] }
             );
         } else {
-            execSync(
-                `reg delete "${REG_KEY}" /v ${REG_NAME} /f`,
+            execFileSync(
+                'reg', ['delete', REG_KEY, '/v', REG_NAME, '/f'],
                 { stdio: ['pipe', 'pipe', 'pipe'] }
             );
         }
@@ -284,13 +309,17 @@ app.get('/now-playing', async (_req, res) => {
             headers: { Authorization: `Bearer ${accessToken}` },
         });
 
+        if (response.ok) lastApiError = null;
         if (response.status === 204 || response.status === 202) {
             nowPlayingCache = { playing: false };
             nowPlayingCacheTime = Date.now();
             return res.json(nowPlayingCache);
         }
         if (!response.ok) {
-            console.error('Spotify API error', response.status);
+            let message = '';
+            try { message = (await response.json()).error?.message ?? ''; } catch { /* no JSON body */ }
+            console.error('Spotify API error', response.status, message);
+            lastApiError = { status: response.status, message };
             return res.json({ playing: false });
         }
 
@@ -344,12 +373,23 @@ app.get('/now-playing', async (_req, res) => {
         res.json(result);
     } catch (err) {
         console.error('Error fetching now-playing:', err.message);
+        lastApiError = { status: null, message: err.message };
         res.json({ playing: false });
     }
 });
 
 // ── Spotify token helpers (PKCE — no client secret) ──────────────────
-async function exchangeCode(code) {
+async function tokenError(resp) {
+    const text = await resp.text();
+    try {
+        const body = JSON.parse(text);
+        return `${body.error_description || body.error} (HTTP ${resp.status})`;
+    } catch {
+        return `HTTP ${resp.status}${text ? ` — ${text}` : ''}`;
+    }
+}
+
+async function exchangeCode(code, codeVerifier) {
     const body = new URLSearchParams({
         grant_type: 'authorization_code',
         code,
@@ -362,10 +402,7 @@ async function exchangeCode(code) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
     });
-    if (!resp.ok) {
-        const errBody = await resp.text();
-        throw new Error(`Token exchange: ${resp.status} — ${errBody}`);
-    }
+    if (!resp.ok) throw new Error(await tokenError(resp));
     return resp.json();
 }
 
@@ -380,7 +417,12 @@ async function refreshAccessToken() {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
     });
-    if (!resp.ok) throw new Error(`Token refresh: ${resp.status}`);
+    if (!resp.ok) {
+        const message = await tokenError(resp);
+        // Spotify rejected the saved login (revoked, or Client ID changed): ask for a fresh login
+        if (resp.status === 400 || resp.status === 401) clearTokens();
+        throw new Error(`Token refresh: ${message}`);
+    }
     const data = await resp.json();
     accessToken = data.access_token;
     if (data.refresh_token) refreshToken = data.refresh_token;
@@ -396,28 +438,66 @@ async function ensureFreshToken() {
 
 // ── Start ─────────────────────────────────────────────────────────────
 const trayMode = process.pkg || process.argv.includes('--tray');
+const launchedAtLogin = process.argv.includes('--autostart');
+const SETTINGS_URL = `http://127.0.0.1:${PORT}/settings.html`;
 
-app.listen(PORT, async () => {
+async function isWidgetAlreadyRunning() {
+    try {
+        const res = await fetch(`http://127.0.0.1:${PORT}/auth-status`, { signal: AbortSignal.timeout(2000) });
+        return 'authenticated' in (await res.json());
+    } catch {
+        return false;
+    }
+}
+
+// The packaged exe's console window closes on exit, so keep it open until the error is read
+function exitWithError(message) {
+    console.error(`\n  ${message}\n`);
+    if (!process.pkg) process.exit(1);
+    console.error('  Press Enter to close this window.');
+    process.stdin.resume();
+    process.stdin.once('data', () => process.exit(1));
+}
+
+app.listen(PORT, async (err) => {
+    if (err?.code === 'EADDRINUSE') {
+        // Launching a second time just opens the settings of the copy that is already running
+        if (await isWidgetAlreadyRunning()) {
+            console.log('\n  Spotify Widget is already running — opening the settings page.\n');
+            if (!launchedAtLogin) await open(SETTINGS_URL);
+            process.exit(0);
+        }
+        return exitWithError(
+            `Port ${PORT} is already in use by another program.\n` +
+            '  Pick another port by creating a file named .env next to the widget containing e.g. PORT=4203,\n' +
+            '  then change the Redirect URI of your Spotify app to http://127.0.0.1:4203/callback.'
+        );
+    }
+    if (err) return exitWithError(`Could not start the widget: ${err.message}`);
+
     console.log(`\n  Spotify Widget running at http://127.0.0.1:${PORT}`);
-    console.log(`  Settings:                 http://127.0.0.1:${PORT}/settings.html`);
+    console.log(`  Settings:                 ${SETTINGS_URL}`);
     console.log(`  OBS browser source URL:   http://127.0.0.1:${PORT}/overlay.html`);
 
     if (refreshToken) {
         try {
             await ensureFreshToken();
             console.log('  Restored session from saved tokens — no login needed.');
-        } catch {
-            console.log('  Saved tokens expired — opening browser to log in.');
-            if (!trayMode) open(`http://127.0.0.1:${PORT}/settings.html`);
+        } catch (e) {
+            // Network hiccups keep the saved login; a rejected login is cleared by refreshAccessToken
+            console.log(`  Could not refresh the Spotify login: ${e.message}`);
         }
-    } else {
-        console.log('  No saved session — opening browser to log in.');
-        if (!trayMode) open(`http://127.0.0.1:${PORT}/settings.html`);
+    }
+
+    // First run (or the saved login was rejected): open the setup page, also in tray mode
+    if (!refreshToken) {
+        console.log('  Not logged in yet — opening the settings page to get you set up.');
+        open(SETTINGS_URL);
     }
 
     // Start system tray icon (packaged exe or --tray flag)
     if (trayMode) {
-        startTray(PORT);
+        startTray(PORT, { showNotice: !launchedAtLogin, canAutostart: AUTOSTART_SUPPORTED });
         console.log('  System tray icon active — right-click to access menu.');
     }
 

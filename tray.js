@@ -4,13 +4,17 @@ import { existsSync } from 'fs';
 /**
  * Starts a system tray icon using PowerShell + .NET Windows Forms.
  * Only runs on Windows. No extra dependencies needed.
+ *
+ * showNotice:   show a balloon so the user knows the widget lives in the tray
+ * canAutostart: offer the "Start with Windows" menu item
  */
-export function startTray(port) {
+export function startTray(port, { showNotice = false, canAutostart = false } = {}) {
     if (process.platform !== 'win32') return;
 
     const settingsUrl = `http://127.0.0.1:${port}/settings.html`;
     const quitUrl = `http://127.0.0.1:${port}/quit`;
-    const exePath = process.execPath.replace(/\\/g, '\\\\');
+    // Value for the PowerShell single-quoted string below ('' escapes a quote)
+    const startupCommand = `"${process.execPath}" --autostart`.replace(/'/g, "''");
 
     // PowerShell script that creates a NotifyIcon with context menu
     const ps1 = `
@@ -52,7 +56,7 @@ $startupItem.Add_Click({
         Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "SpotifyWidget" -ErrorAction SilentlyContinue
         $startupItem.Checked = $false
     } else {
-        Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "SpotifyWidget" -Value '"${exePath}"'
+        Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" -Name "SpotifyWidget" -Value '${startupCommand}'
         $startupItem.Checked = $true
     }
 })
@@ -68,8 +72,8 @@ $quitItem.Add_Click({
 })
 
 $menu.Items.Add($openItem) | Out-Null
-$menu.Items.Add($sep1) | Out-Null
-$menu.Items.Add($startupItem) | Out-Null
+${canAutostart ? `$menu.Items.Add($sep1) | Out-Null
+$menu.Items.Add($startupItem) | Out-Null` : ''}
 $menu.Items.Add($sep2) | Out-Null
 $menu.Items.Add($quitItem) | Out-Null
 
@@ -77,6 +81,8 @@ $notify.ContextMenuStrip = $menu
 
 # Double-click opens settings
 $notify.Add_DoubleClick({ Start-Process "${settingsUrl}" })
+$notify.Add_BalloonTipClicked({ Start-Process "${settingsUrl}" })
+${showNotice ? `$notify.ShowBalloonTip(6000, "Spotify Widget is running", "It lives here in the system tray. Double-click the green icon to open the settings.", [System.Windows.Forms.ToolTipIcon]::Info)` : ''}
 
 # Hide console window
 Add-Type -MemberDefinition '[DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow(); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);' -Name Win32 -Namespace Native
