@@ -63,7 +63,13 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 
 Double-click **`SpotifyWidget.exe`**.
 
-> Windows may show **"Windows protected your PC"** because the app isn't code-signed. Click **More info → Run anyway**.  
+> **Windows may show "Windows protected your PC"** because the app isn't code-signed.
+> If you downloaded it from this repository's official releases and trust it:
+>
+> 1. Click **More info**.
+> 2. Click **Run anyway**.
+>
+> You only need to allow this app; do not disable SmartScreen or your antivirus.
 > The release is built by [GitHub Actions](.github/workflows/release.yml) straight from this repo's source, or you can [build it yourself](#run-from-source).
 
 The settings page opens in your browser and a green dot appears in the system tray, near the clock.
