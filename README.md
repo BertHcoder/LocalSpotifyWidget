@@ -13,28 +13,28 @@ Just your Spotify, your OBS, and a tiny local server. That's it.
 
 ## What It Does
 
-Displays the song you're currently playing on Spotify as a clean overlay inside OBS — album art, track title, artist, live progress bar, next track preview, and a scannable Spotify Code. Updates every 3 seconds. Hides itself when nothing is playing.
+Displays the song you're currently playing on Spotify as a clean overlay inside OBS - album art, track title, artist, live progress bar, next track preview, and a scannable Spotify Code. Updates every 3 seconds. Hides itself when nothing is playing.
 
 ## Features
 
-- **Guided setup** — the settings page walks you through connecting Spotify step by step, with copy buttons and plain-language error messages
-- **Album art** — full-res cover pulled straight from the Spotify API
-- **Track title with auto-scroll** — long titles get a smooth marquee animation instead of ugly truncation
-- **Artist name** — all featured artists, comma-separated
-- **Smooth progress bar** — interpolates between polls for a buttery-smooth real-time feel
-- **Next track preview** — shows what's coming up next in your queue
-- **Album name** — optional display of the current album (toggle in settings)
-- **Podcast & episode support** — detects episodes automatically, shows the podcast/show name in green
-- **Color-adaptive background** — widget background tints to match the album art (disable with `?adaptive=false`)
-- **Custom text color** — override text color manually or let auto-contrast pick black/white based on background
-- **Widget transparency** — adjustable opacity so the widget blends into your scene
-- **Spotify Code** — scannable barcode so viewers can instantly grab the song
-- **Auto-hide** — widget slides out when playback is paused or stopped
-- **Transparent background** — composites cleanly over any OBS scene
-- **Auto-refresh tokens** — handles OAuth token renewal silently, no re-auth needed
-- **System tray** — the `.exe` build runs in the tray with settings access and a quit option
-- **Start with Windows** — one-click toggle to auto-launch on login (settings page or tray menu)
-- **Response caching** — multiple browser sources share a single API call (no rate-limit worries)
+- **Guided setup** - the settings page walks you through connecting Spotify step by step, with copy buttons and plain-language error messages
+- **Album art** - full-res cover pulled straight from the Spotify API
+- **Track title with auto-scroll** - long titles get a smooth marquee animation instead of ugly truncation
+- **Artist name** - all featured artists, comma-separated
+- **Smooth progress bar** - interpolates between polls for a buttery-smooth real-time feel
+- **Next track preview** - shows what's coming up next in your queue
+- **Album name** - optional display of the current album (toggle in settings)
+- **Podcast & episode support** - detects episodes automatically, shows the podcast/show name in green
+- **Color-adaptive background** - widget background tints to match the album art (disable with `?adaptive=false`)
+- **Custom text color** - override text color manually or let auto-contrast pick black/white based on background
+- **Widget transparency** - adjustable opacity so the widget blends into your scene
+- **Spotify Code** - scannable barcode so viewers can instantly grab the song
+- **Auto-hide** - widget slides out when playback is paused or stopped
+- **Transparent background** - composites cleanly over any OBS scene
+- **Auto-refresh tokens** - handles OAuth token renewal silently, no re-auth needed
+- **System tray** - the `.exe` build runs in the tray with settings access and a quit option
+- **Start with Windows** - one-click toggle to auto-launch on login (settings page or tray menu)
+- **Response caching** - multiple browser sources share a single API call (no rate-limit worries)
 
 ## What It Doesn't Do
 
@@ -51,11 +51,11 @@ Displays the song you're currently playing on Spotify as a clean overlay inside 
 
 - **Windows 10 or 11** (on macOS/Linux, [run it from source](#run-from-source))
 - **OBS Studio**
-- **Spotify Premium** — Spotify requires a small (free) developer app to read what's playing, and [since February 2026](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide) the account that owns that app must have Premium.
+- **Spotify Premium** - Spotify requires a small (free) developer app to read what's playing, and [since February 2026](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide) the account that owns that app must have Premium.
 
 ### 1. Download
 
-1. **[⬇ Download the latest release](https://github.com/BertHcoder/LocalSpotifyWidget/releases/latest)** — grab the `SpotifyWidget-…-win-x64.zip` file.
+1. **[⬇ Download the latest release](https://github.com/BertHcoder/LocalSpotifyWidget/releases/latest)** - grab the `SpotifyWidget-…-win-x64.zip` file.
 2. Extract it to a folder you'll keep, e.g. `Documents\SpotifyWidget`.  
    Your settings and Spotify login are saved in that folder, so don't run the widget from inside the zip.
 
@@ -127,9 +127,9 @@ Append `?theme=` to the browser source URL to switch layouts:
 
 | Theme | URL | Description |
 |-------|-----|-------------|
-| **Default** | `.../overlay.html` | Full card — album art, progress bar, next track, Spotify Code |
-| **Compact** | `.../overlay.html?theme=compact` | Thin bar — smaller art, no next track or code (320 × ~60) |
-| **Minimal** | `.../overlay.html?theme=minimal` | Text only — no art, just title, artist, and a slim progress bar |
+| **Default** | `.../overlay.html` | Full card - album art, progress bar, next track, Spotify Code |
+| **Compact** | `.../overlay.html?theme=compact` | Thin bar - smaller art, no next track or code (320 × ~60) |
+| **Minimal** | `.../overlay.html?theme=minimal` | Text only - no art, just title, artist, and a slim progress bar |
 
 ### Adaptive Background
 
@@ -200,11 +200,11 @@ Spotify no longer accepts the saved login, for example because you removed the a
 
 | File | Purpose |
 |------|---------|
-| `server.js` | Express server — handles Spotify OAuth (PKCE), proxies the API, serves the overlay and settings |
+| `server.js` | Express server - handles Spotify OAuth (PKCE), proxies the API, serves the overlay and settings |
 | `overlay.html` | The page OBS loads as a browser source |
 | `settings.html` | In-browser settings page: guided Spotify setup, theme, colors, toggles, system controls. Opens on first run |
 | `settings.json` | Persisted user preferences (auto-generated) |
-| `style.css` | All styling — dark theme, Spotify green accent, smooth animations |
+| `style.css` | All styling - dark theme, Spotify green accent, smooth animations |
 | `widget.js` | Client-side polling logic, marquee, progress interpolation |
 | `colors.js` | Named color map shared between widget and settings |
 | `tray.js` | Windows system tray icon (context menu, start-with-Windows toggle) |
@@ -216,29 +216,29 @@ The overlay polls the local server every **3 seconds**. The server calls the Spo
 
 ## Advanced Tweaks
 
-**Change poll speed** — edit `POLL_INTERVAL` in `widget.js` (default: 3000 ms).  
-**Change port** — set `PORT=5000` in a `.env` file next to the `.exe` (or in the project root), and update the Redirect URI in your Spotify app to match.  
-**Change styling** — edit `style.css` directly. The widget is 380px wide by default with a semi-transparent dark background and rounded corners.
+**Change poll speed** - edit `POLL_INTERVAL` in `widget.js` (default: 3000 ms).  
+**Change port** - set `PORT=5000` in a `.env` file next to the `.exe` (or in the project root), and update the Redirect URI in your Spotify app to match.  
+**Change styling** - edit `style.css` directly. The widget is 380px wide by default with a semi-transparent dark background and rounded corners.
 
 ---
 
 ## Tech Stack
 
-- **Node.js** + **Express 5** — local server (~500 lines)
-- **Spotify Web API** — official REST API with OAuth 2.0 PKCE
-- **Vanilla HTML/CSS/JS** — no React, no Vue, no build step, no bundler
-- **2 dependencies** — `express` and `open` (for the initial auth browser tab)
-- **System tray** — native Windows tray via PowerShell/.NET (zero extra deps)
+- **Node.js** + **Express 5** - local server (~500 lines)
+- **Spotify Web API** - official REST API with OAuth 2.0 PKCE
+- **Vanilla HTML/CSS/JS** - no React, no Vue, no build step, no bundler
+- **2 dependencies** - `express` and `open` (for the initial auth browser tab)
+- **System tray** - native Windows tray via PowerShell/.NET (zero extra deps)
 
 ---
 
 ## Upcoming: No More Developer App Needed
 
-I'm currently applying for a Spotify app approval. Once approved, the widget will ship with a built-in Client ID — meaning **you won't need to create your own Spotify Developer App anymore**. Setup will be as simple as: install, log in, done.
+I'm currently applying for a Spotify app approval. Once approved, the widget will ship with a built-in Client ID - meaning **you won't need to create your own Spotify Developer App anymore**. Setup will be as simple as: install, log in, done.
 
 Until that's approved, you still need to create a free Spotify Developer App (takes 30 seconds, instructions above).
 
-**Testers appreciated!** If you'd like to help test the widget before the app is fully approved, I'd love the help — just open an issue or reach out.
+**Testers appreciated!** If you'd like to help test the widget before the app is fully approved, I'd love the help - just open an issue or reach out.
 
 ---
 
